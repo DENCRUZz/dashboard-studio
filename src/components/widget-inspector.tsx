@@ -134,6 +134,7 @@ function FilterRuleRow({ rule, columns, onChange, onRemove }: { rule: RowFilter;
 }
 
 function DateVariablePicker({ onSelect }: { onSelect: (v: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
   const vars = [
     { label: "Hoy", value: "{hoy}" },
     { label: "Ayer", value: "{ayer}" },
@@ -143,13 +144,33 @@ function DateVariablePicker({ onSelect }: { onSelect: (v: string) => void }) {
     { label: "Inicio año", value: "{inicio_año}" },
   ];
   return (
-    <div className="group relative">
-      <button className="rounded bg-zinc-100 p-1 text-[10px] dark:bg-zinc-800">📅</button>
-      <div className="absolute right-0 top-full z-30 mt-1 hidden w-32 flex-col rounded-md border border-zinc-200 bg-white shadow-lg group-hover:flex dark:border-zinc-800 dark:bg-zinc-900">
-        {vars.map(v => (
-          <button key={v.value} onClick={() => onSelect(v.value)} className="px-2 py-1.5 text-left text-[10px] hover:bg-zinc-50 dark:hover:bg-zinc-800">{v.label}</button>
-        ))}
-      </div>
+    <div className="relative">
+      <button 
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`rounded p-1 text-[10px] transition-colors ${isOpen ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40' : 'bg-zinc-100 dark:bg-zinc-800'}`}
+      >
+        📅
+      </button>
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setIsOpen(false)} />
+          <div className="absolute right-0 top-full z-30 mt-1 flex w-32 flex-col rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+            {vars.map(v => (
+              <button 
+                key={v.value} 
+                onClick={() => {
+                  onSelect(v.value);
+                  setIsOpen(false);
+                }} 
+                className="px-2 py-1.5 text-left text-[10px] hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
