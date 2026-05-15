@@ -46,6 +46,7 @@ export function formatDisplayNumber(
       return new Intl.NumberFormat(undefined, {
         style: "currency",
         currency: currencyCode || "USD",
+        currencyDisplay: "narrowSymbol",
         minimumFractionDigits: minF,
         maximumFractionDigits: maxF,
       }).format(value);
@@ -54,6 +55,7 @@ export function formatDisplayNumber(
         return new Intl.NumberFormat(undefined, {
           style: "currency",
           currency: currencyCode || "USD",
+          currencyDisplay: "narrowSymbol",
           currencySign: "accounting",
           minimumFractionDigits: minF ?? 2,
           maximumFractionDigits: maxF ?? 2,
