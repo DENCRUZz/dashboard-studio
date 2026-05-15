@@ -321,7 +321,7 @@ function WidgetTable({
                 {keys.map((c) => (
                   <td
                     key={c}
-                    className="px-3 py-2 font-mono"
+                    className="px-3 py-2 font-sans"
                     style={{ color: rowStyle.color ? 'inherit' : (display.colorText || 'inherit') }}
                   >
                     {formatCell(c, r[c])}
