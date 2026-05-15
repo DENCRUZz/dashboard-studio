@@ -505,6 +505,14 @@ function ColumnsManager({
     setDraggedId(null);
   };
 
+  const moveItem = (fromIdx: number, toIdx: number) => {
+    if (toIdx < 0 || toIdx >= allCols.length) return;
+    const items = [...allCols];
+    const [removed] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, removed);
+    onPatch({ columnOrder: items.map(i => i.name) });
+  };
+
   const addCustom = () => {
     const id = Math.random().toString(36).substring(7);
     const header = `Columna ${customCols.length + 1}`;
@@ -537,7 +545,7 @@ function ColumnsManager({
         </div>
         
         <div className="max-h-[500px] overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/50">
-          {allCols.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(col => {
+          {allCols.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((col, idx) => {
             const custom = customCols.find(cc => cc.id === col.id);
             return (
               <div 
@@ -546,13 +554,35 @@ function ColumnsManager({
                 onDragStart={() => handleDragStart(col.id)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => handleDrop(col.id)}
-                className={`flex items-center gap-2 ${draggedId === col.id ? "opacity-20" : ""} select-none touch-none active:bg-zinc-100 dark:active:bg-zinc-900`}
+                className={`flex items-center gap-1 ${draggedId === col.id ? "opacity-20" : ""} select-none`}
               >
-                <div className="flex shrink-0 cursor-grab items-center justify-center py-3 pl-3 text-zinc-300 hover:text-zinc-500">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
+                {/* Drag Handle & Mobile Move Controls */}
+                <div className="flex flex-col items-center gap-1 shrink-0 px-2 py-2 border-r border-zinc-100 dark:border-zinc-800/50">
+                  <button 
+                    onClick={() => moveItem(idx, idx - 1)}
+                    className="p-1 text-zinc-300 hover:text-blue-500 active:scale-125 transition-transform"
+                    title="Subir"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <div className="cursor-grab active:cursor-grabbing text-zinc-300 hidden md:block">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </div>
+                  <button 
+                    onClick={() => moveItem(idx, idx + 1)}
+                    className="p-1 text-zinc-300 hover:text-blue-500 active:scale-125 transition-transform"
+                    title="Bajar"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                 </div>
+
                 <div className="flex-1 min-w-0">
                   <ColumnSettingsItem 
                     id={col.id}
