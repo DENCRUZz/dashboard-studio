@@ -21,6 +21,27 @@ const rowMinClass = {
   4: "min-h-[380px]",
 } as const;
 
+function ViewSelector({ widget }: { widget: any }) {
+  const applyView = useDashboardStore(s => s.applyWidgetView);
+  if (!widget.views || widget.views.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-[9px] font-bold uppercase text-zinc-400">Vista:</span>
+      <select
+        className="rounded border border-zinc-200 bg-white/50 px-1.5 py-0.5 text-[10px] font-bold outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900/50"
+        value={widget.activeViewId || ""}
+        onChange={(e) => applyView(widget.id, e.target.value)}
+      >
+        <option value="">Original</option>
+        {widget.views.map((v: any) => (
+          <option key={v.id} value={v.id}>{v.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function DashboardShell() {
   const dashboard = useDashboardStore((s) => s.dashboard);
   const editing = useDashboardStore((s) => s.editing);
@@ -301,7 +322,7 @@ export function DashboardShell() {
 
           <div 
             ref={gridRef}
-            className="grid grid-cols-12 gap-6 [grid-auto-rows:60px]"
+            className="grid grid-cols-2 md:grid-cols-12 gap-4 md:gap-6 [grid-auto-rows:60px]"
           >
             {dashboard.widgets.map((w) => {
               const conn = connections.find((c) => c.id === w.connectionId);
@@ -310,15 +331,16 @@ export function DashboardShell() {
               return (
                 <section
                   key={w.id}
-                  className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 
+                  className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 md:p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 
                     ${isDragging ? 'opacity-20 scale-95' : 'opacity-100'} 
                     ${editing ? 'hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-500/30' : ''}
+                    ${w.layout.mobileWidth === 'full' ? 'col-span-2' : 'col-span-1 aspect-square md:aspect-auto'}
                   `}
                   style={{
-                    gridColumnStart: (w.layout.x ?? 0) + 1,
-                    gridRowStart: (w.layout.y ?? 0) + 1,
-                    gridColumnEnd: `span ${w.layout.colSpan || 6}`,
-                    gridRowEnd: `span ${w.layout.rowSpan || 4}`,
+                    gridColumnStart: typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : (w.layout.x ?? 0) + 1,
+                    gridRowStart: typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : (w.layout.y ?? 0) + 1,
+                    gridColumnEnd: typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : `span ${w.layout.colSpan || 6}`,
+                    gridRowEnd: typeof window !== 'undefined' && window.innerWidth < 768 ? (w.layout.mobileWidth === 'full' ? 'span 4' : 'auto') : `span ${w.layout.rowSpan || 4}`,
                     backgroundColor: w.display.colorBackground,
                     color: w.display.colorText,
                   }}
@@ -352,6 +374,9 @@ export function DashboardShell() {
                           {conn.name}
                         </p>
                       )}
+                      <div className="mt-1">
+                        <ViewSelector widget={w} />
+                      </div>
                     </div>
                     {editing && (
                       <div className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100">

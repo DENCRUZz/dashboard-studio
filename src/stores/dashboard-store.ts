@@ -39,6 +39,11 @@ type Store = {
   removeWidget: (id: string) => void;
   moveWidgetToPos: (id: string, x: number, y: number) => void;
   
+  // Views
+  saveWidgetView: (widgetId: string, name: string) => void;
+  applyWidgetView: (widgetId: string, viewId: string) => void;
+  deleteWidgetView: (widgetId: string, viewId: string) => void;
+  
 
   importFullState: (raw: string) => { ok: true } | { ok: false; error: string };
   exportFullState: () => string;
@@ -179,6 +184,69 @@ export const useDashboardStore = create<Store>()(
             widgets: s.dashboard.widgets.map((w) =>
               w.id === id ? { ...w, layout: { ...w.layout, x, y } } : w
             ),
+          },
+        })),
+
+      saveWidgetView: (widgetId, name) =>
+        set((s) => ({
+          dashboard: {
+            ...s.dashboard,
+            widgets: s.dashboard.widgets.map((w) => {
+              if (w.id !== widgetId) return w;
+              const vid = newId();
+              // Support both simple filters and advanced filters if present
+              const newView = {
+                id: vid,
+                name,
+                filters: JSON.parse(JSON.stringify(w.source.filters || [])),
+                advancedFilters: (w.source as any).advancedFilters ? JSON.parse(JSON.stringify((w.source as any).advancedFilters)) : undefined,
+                display: JSON.parse(JSON.stringify(w.display)),
+              };
+              return {
+                ...w,
+                views: [...(w.views || []), newView],
+                activeViewId: vid,
+              };
+            }),
+          },
+        })),
+
+      applyWidgetView: (widgetId, viewId) =>
+        set((s) => ({
+          dashboard: {
+            ...s.dashboard,
+            widgets: s.dashboard.widgets.map((w) => {
+              if (w.id !== widgetId) return w;
+              const view = w.views?.find((v) => v.id === viewId);
+              if (!view) return w;
+              
+              const newSource = { ...w.source };
+              newSource.filters = JSON.parse(JSON.stringify(view.filters));
+              if (view.advancedFilters) {
+                (newSource as any).advancedFilters = JSON.parse(JSON.stringify(view.advancedFilters));
+              }
+
+              return {
+                ...w,
+                source: newSource,
+                activeViewId: viewId,
+              };
+            }),
+          },
+        })),
+
+      deleteWidgetView: (widgetId, viewId) =>
+        set((s) => ({
+          dashboard: {
+            ...s.dashboard,
+            widgets: s.dashboard.widgets.map((w) => {
+              if (w.id !== widgetId) return w;
+              return {
+                ...w,
+                views: (w.views || []).filter((v) => v.id !== viewId),
+                activeViewId: w.activeViewId === viewId ? undefined : w.activeViewId,
+              };
+            }),
           },
         })),
 

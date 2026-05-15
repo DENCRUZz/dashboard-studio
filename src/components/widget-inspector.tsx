@@ -715,6 +715,64 @@ export function WidgetInspector({ widget, onClose }: { widget: DashboardWidget; 
             </section>
 
             <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Diseño Móvil</p>
+              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg">
+                <button 
+                  onClick={() => patch({ layout: { ...widget.layout, mobileWidth: 'half' } })}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.layout.mobileWidth !== 'full' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
+                >
+                  Mitad (1/2)
+                </button>
+                <button 
+                  onClick={() => patch({ layout: { ...widget.layout, mobileWidth: 'full' } })}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.layout.mobileWidth === 'full' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
+                >
+                  Completo
+                </button>
+              </div>
+              <p className="mt-2 text-[9px] text-zinc-400">En móvil, 'Mitad' forzará un formato cuadrado.</p>
+            </section>
+
+            <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Vistas Guardadas (Filtros)</p>
+                <button 
+                  onClick={() => {
+                    const name = prompt("Nombre de la vista:");
+                    if (name) useDashboardStore.getState().saveWidgetView(widget.id, name);
+                  }}
+                  className="text-[10px] font-bold text-blue-600 hover:underline"
+                >
+                  + Guardar Actual
+                </button>
+              </div>
+              <div className="space-y-2">
+                {(!widget.views || widget.views.length === 0) && (
+                  <p className="text-[10px] italic text-zinc-400 text-center py-2">No hay vistas guardadas.</p>
+                )}
+                {widget.views?.map(v => (
+                  <div key={v.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/30">
+                    <span className="text-xs font-medium">{v.name}</span>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => useDashboardStore.getState().applyWidgetView(widget.id, v.id)}
+                        className={`text-[10px] font-bold ${widget.activeViewId === v.id ? 'text-green-600' : 'text-zinc-400 hover:text-blue-600'}`}
+                      >
+                        {widget.activeViewId === v.id ? 'Activa' : 'Aplicar'}
+                      </button>
+                      <button 
+                        onClick={() => useDashboardStore.getState().deleteWidgetView(widget.id, v.id)}
+                        className="text-[10px] text-red-400 hover:text-red-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
               <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Opciones de Bloque</p>
               <div className="mt-5 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
                 <label className="flex items-center gap-3 cursor-pointer group">

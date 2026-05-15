@@ -173,6 +173,8 @@ export type WidgetLayout = {
   y: number;
   colSpan: number;
   rowSpan: number;
+  /** 'half' = 1 col in mobile (square), 'full' = 2 cols in mobile */
+  mobileWidth?: 'half' | 'full';
 };
 
 export type DashboardWidget = {
