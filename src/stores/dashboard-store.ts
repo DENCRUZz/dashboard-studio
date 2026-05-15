@@ -37,9 +37,6 @@ type Store = {
   removeWidget: (id: string) => void;
   moveWidgetToPos: (id: string, x: number, y: number) => void;
   
-  // Global Filters
-  setGlobalFilters: (filters: FilterGroup) => void;
-  clearGlobalFilters: () => void;
 
   importFullState: (raw: string) => { ok: true } | { ok: false; error: string };
   exportFullState: () => string;
@@ -79,7 +76,6 @@ function defaultWidget(
 const initialDashboard: DashboardStateShape = {
   name: "Mi tablero",
   widgets: [],
-  globalFilters: { operator: "and", rules: [] },
 };
 
 export const useDashboardStore = create<Store>()(
@@ -182,17 +178,6 @@ export const useDashboardStore = create<Store>()(
           },
         })),
 
-      setGlobalFilters: (filters) =>
-        set((s) => ({
-          dashboard: { ...s.dashboard, globalFilters: filters },
-        })),
-      clearGlobalFilters: () =>
-        set((s) => ({
-          dashboard: {
-            ...s.dashboard,
-            globalFilters: { operator: "and", rules: [] },
-          },
-        })),
 
       importFullState: (raw) => {
         try {
@@ -212,10 +197,6 @@ export const useDashboardStore = create<Store>()(
             dashboard: {
               name: d.dashboard.name ?? "Importado",
               widgets: d.dashboard.widgets,
-              globalFilters: d.dashboard.globalFilters ?? {
-                operator: "and",
-                rules: [],
-              },
             },
           });
           return { ok: true };
@@ -247,10 +228,6 @@ export const useDashboardStore = create<Store>()(
       merge: (persistedState: any, currentState) => {
         const s = persistedState as Store;
         if (!s || !s.dashboard) return currentState;
-        // Migration: Ensure globalFilters exists
-        if (!s.dashboard.globalFilters) {
-          s.dashboard.globalFilters = { operator: "and", rules: [] };
-        }
         // Migration: Ensure widgets have views and valid sources
         s.dashboard.widgets.forEach(w => {
           if (!w.views) w.views = [];

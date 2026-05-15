@@ -33,7 +33,6 @@ export function DashboardShell() {
   const moveWidgetToPos = useDashboardStore((s) => s.moveWidgetToPos);
   const exportFullState = useDashboardStore((s) => s.exportFullState);
   const importFullState = useDashboardStore((s) => s.importFullState);
-  const clearGlobalFilters = useDashboardStore((s) => s.clearGlobalFilters);
 
   const [inspectId, setInspectId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -285,37 +284,6 @@ export function DashboardShell() {
           </div>
         </header>
 
-        <div className="relative z-10 border-b border-zinc-200 bg-zinc-50/50 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-900/30">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-xs font-medium shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
-              <svg className="h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              <span>Filtros Globales</span>
-            </div>
-            
-            {dashboard.globalFilters?.rules && dashboard.globalFilters.rules.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-1">
-                  {dashboard.globalFilters.rules.map((r: any, i: number) => (
-                    <span key={i} className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                      {r.column} {r.operator} {String(r.value)}
-                    </span>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => clearGlobalFilters()}
-                  className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-red-600 hover:underline dark:text-red-400"
-                >
-                  Limpiar y restaurar
-                </button>
-              </>
-            ) : (
-              <p className="text-[10px] text-zinc-400">Sin filtros activos. Afectan a todos los bloques.</p>
-            )}
-          </div>
-        </div>
 
         <main 
           className="relative z-10 flex-1 overflow-y-auto p-6"

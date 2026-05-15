@@ -190,8 +190,6 @@ export type DashboardWidget = {
 export type DashboardStateShape = {
   name: string;
   widgets: DashboardWidget[];
-  /** NEW: Global filters shared by all widgets */
-  globalFilters: FilterGroup;
 };
 
 export const defaultDisplay = (): DisplayConfig => ({

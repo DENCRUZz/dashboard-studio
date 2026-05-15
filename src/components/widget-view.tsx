@@ -131,15 +131,6 @@ function WidgetChart({
               cy="40%"
               outerRadius={60}
               label={{ fontSize: 10, fill: display.colorText || "currentColor" }}
-              onClick={(entry) => {
-                if (cat) {
-                  setGlobalFilters({
-                    operator: "and",
-                    rules: [{ column: cat, operator: "eq", value: entry.name }]
-                  });
-                }
-              }}
-              style={{ cursor: 'pointer' }}
             >
               {data.map((_, i) => (
                 <Cell
@@ -237,15 +228,6 @@ function WidgetChart({
             dataKey="value"
             fill={display.colorAccent || "var(--accent)"}
             radius={[4, 4, 0, 0]}
-            onClick={(entry) => {
-              if (cat) {
-                setGlobalFilters({
-                  operator: "and",
-                  rules: [{ column: cat, operator: "eq", value: entry.name }]
-                });
-              }
-            }}
-            style={{ cursor: 'pointer' }}
           />
         </BarChart>
       </ResponsiveContainer>
@@ -335,14 +317,8 @@ function WidgetTable({
                 {keys.map((c) => (
                   <td
                     key={c}
-                    className="px-3 py-2 font-mono cursor-pointer hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
+                    className="px-3 py-2 font-mono"
                     style={{ color: rowStyle.color ? 'inherit' : (display.colorText || 'inherit') }}
-                    onClick={() => {
-                      setGlobalFilters({
-                        operator: "and",
-                        rules: [{ column: c, operator: "eq", value: r[c] }]
-                      });
-                    }}
                   >
                     {formatCell(c, r[c])}
                   </td>
@@ -482,7 +458,6 @@ export function WidgetView({
   widget: DashboardWidget;
   connection: SupabaseConnection | undefined;
 }) {
-  const globalFilters = useDashboardStore((s) => s.dashboard.globalFilters || { operator: "and", rules: [] });
   const [result, setResult] = useState<FetchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -504,10 +479,10 @@ export function WidgetView({
       return;
     }
     setLoading(true);
-    const out = await fetchWidgetRows(connection, widget, globalFilters);
+    const out = await fetchWidgetRows(connection, widget);
     setResult(out);
     setLoading(false);
-  }, [connection, widget, globalFilters]);
+  }, [connection, widget]);
 
   useEffect(() => {
     void load();

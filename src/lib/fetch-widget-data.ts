@@ -57,7 +57,6 @@ function applyFilters<T>(
   query: T,
   filters: RowFilter[],
   advancedFilters?: FilterGroup,
-  globalFilters?: FilterGroup,
 ): T {
   let q = query as any;
 
@@ -85,28 +84,12 @@ function applyFilters<T>(
     if (filterStr) q = q.or(filterStr);
   }
 
-  // 3. Global filters
-  if (globalFilters && globalFilters.rules.length > 0) {
-    const filterStr = buildFilterString(globalFilters);
-    if (filterStr) {
-      // If it's an 'and' group, we can just apply it. 
-      // If it's an 'or' group, we use .or().
-      if (globalFilters.operator === "and") {
-        // For simplicity, we wrap it in an OR string which Postgrest handles as a filter group
-        q = q.or(filterStr);
-      } else {
-        q = q.or(filterStr);
-      }
-    }
-  }
-
   return q as T;
 }
 
 export async function fetchWidgetRows(
   connection: ConnectionCredentials,
   widget: DashboardWidget,
-  globalFilters?: FilterGroup,
 ): Promise<FetchResult> {
   const client = getSupabaseForConnection(connection);
 
@@ -117,7 +100,7 @@ export async function fetchWidgetRows(
     if (src.kind === "rpc") {
       const args = resolveValueVariables(src.args);
       let q = client.rpc(src.functionName, args as never);
-      q = applyFilters(q, src.filters, adv, globalFilters);
+      q = applyFilters(q, src.filters, adv);
       
       const { data, error } = await q;
       if (error) return rpcError(error);
@@ -134,7 +117,7 @@ export async function fetchWidgetRows(
 
     if (display.aggregate === "count_rows") {
       let q = fromTable().select("*", { count: "exact", head: true });
-      q = applyFilters(q, src.filters, adv, globalFilters);
+      q = applyFilters(q, src.filters, adv);
       const { count, error } = await q;
       if (error) return rpcError(error);
       return { ok: true, rows: [{ count: count ?? 0 }], rowCount: count ?? 0 };
@@ -148,7 +131,7 @@ export async function fetchWidgetRows(
     while (allRows.length < limit) {
       const take = Math.min(PAGE_SIZE, limit - allRows.length);
       let q = fromTable().select(src.select);
-      q = applyFilters(q, src.filters, adv, globalFilters);
+      q = applyFilters(q, src.filters, adv);
 
       if (src.orderBy) {
         q = q.order(src.orderBy.column, { ascending: src.orderBy.ascending });
