@@ -67,8 +67,8 @@ function WidgetChart({
 }) {
   const display = mergeDisplay(widget.display);
   const cat = display.categoryField ?? display.labelField;
-  const val = display.valueField;
-  const fmt = (n: number) => formatDisplayNumber(n, display);
+  const valField = display.valueField;
+  const fmt = (n: number) => formatDisplayNumber(n, display, valField);
 
   const data = useMemo(() => {
     if (timeSeries !== null) {
@@ -77,17 +77,17 @@ function WidgetChart({
         value: t.value,
       }));
     }
-    if (!cat || !val) {
+    if (!cat || !valField) {
       return [];
     }
     return rows.map((r) => ({
       name: String(r[cat] ?? ""),
       value:
-        typeof r[val] === "number"
-          ? r[val]
-          : Number(r[val]) || 0,
+        typeof r[valField] === "number"
+          ? r[valField]
+          : Number(r[valField]) || 0,
     }));
-  }, [rows, cat, val, timeSeries]);
+  }, [rows, cat, valField, timeSeries]);
 
   if (timeSeries !== null && timeSeries.length === 0) {
     return (
@@ -97,7 +97,7 @@ function WidgetChart({
     );
   }
 
-  if (timeSeries === null && (!cat || !val)) {
+  if (timeSeries === null && (!cat || !valField)) {
     return (
       <p className="text-sm text-zinc-500">
         Configura categoría y valor, o agrupación temporal + fecha + cantidad.
