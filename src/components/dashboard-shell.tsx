@@ -80,7 +80,7 @@ export function DashboardShell() {
   };
 
   useEffect(() => {
-    if (!resizingId || !resizeInitial) return;
+    if (!resizingId && !movingId) return;
 
     const handleEnd = () => {
       setResizingId(null);
