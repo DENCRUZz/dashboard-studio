@@ -68,10 +68,12 @@ export function DashboardShell() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const handleQuery = (e: MediaQueryListEvent | MediaQueryList) => setIsMobile(e.matches);
+    
+    handleQuery(mediaQuery);
+    mediaQuery.addEventListener("change", handleQuery);
+    return () => mediaQuery.removeEventListener("change", handleQuery);
   }, []);
 
   const inspected = dashboard.widgets.find((w) => w.id === inspectId);
@@ -345,9 +347,9 @@ export function DashboardShell() {
                     ${w.layout.mobileWidth === 'full' ? 'col-span-2' : 'col-span-1'}
                   `}
                   style={{
-                    gridColumnStart: isMobile ? 'auto' : (w.layout.x ?? 0) + 1,
-                    gridRowStart: isMobile ? 'auto' : (w.layout.y ?? 0) + 1,
-                    gridColumnEnd: isMobile ? 'auto' : `span ${w.layout.colSpan || 6}`,
+                    gridColumnStart: isMobile ? undefined : (w.layout.x ?? 0) + 1,
+                    gridRowStart: isMobile ? undefined : (w.layout.y ?? 0) + 1,
+                    gridColumnEnd: isMobile ? undefined : `span ${w.layout.colSpan || 6}`,
                     gridRowEnd: isMobile 
                       ? `span ${w.layout.mobileRowSpan || w.layout.rowSpan || 4}` 
                       : `span ${w.layout.rowSpan || 4}`,
@@ -355,14 +357,16 @@ export function DashboardShell() {
                     color: w.display.colorText,
                   }}
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                  <div 
+                    className={`mb-4 flex items-start justify-between gap-3 ${editing ? 'cursor-move' : ''}`}
+                    onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
+                    onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
+                  >
+                    <div className="min-w-0" onMouseDown={e => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         {editing && (
                           <div 
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 cursor-move touch-none shadow-sm hover:bg-blue-600 hover:text-white dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-600 transition-all active:scale-95"
-                            onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
-                            onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400"
                             title="Arrastrar para mover"
                           >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -385,12 +389,12 @@ export function DashboardShell() {
                           {conn.name}
                         </p>
                       )}
-                      <div className="mt-1">
+                      <div className="mt-1" onMouseDown={e => e.stopPropagation()}>
                         <ViewSelector widget={w} />
                       </div>
                     </div>
                     {editing && (
-                      <div className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100" onMouseDown={e => e.stopPropagation()}>
                         <button
                           type="button"
                           className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-900/30"
