@@ -279,7 +279,18 @@ function WidgetTable({
     for (const r of filteredRows) {
       Object.keys(r).forEach((x) => k.add(x));
     }
-    return [...k].filter((c) => !hidden.has(c));
+    const sorted = [...k].filter((c) => !hidden.has(c));
+    if (display.columnOrder && display.columnOrder.length > 0) {
+      const order = display.columnOrder;
+      sorted.sort((a, b) => {
+        let idxA = order.indexOf(a);
+        let idxB = order.indexOf(b);
+        if (idxA === -1) idxA = 999;
+        if (idxB === -1) idxB = 999;
+        return idxA - idxB;
+      });
+    }
+    return sorted;
   }, [filteredRows, display.hiddenColumns]);
 
   if (filteredRows.length === 0) {

@@ -162,6 +162,8 @@ export type DisplayConfig = {
   enableSearch: boolean;
   /** NEW: Custom columns with JS logic */
   customColumns: CustomColumn[];
+  /** NEW: Ordered list of columns to display */
+  columnOrder?: string[];
   /** NEW: UI-level sorting */
   orderBy?: { column: string; ascending: boolean };
 };

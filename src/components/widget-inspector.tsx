@@ -369,10 +369,24 @@ function ColumnSettingsItem({
           </div>
 
           <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input type="checkbox" checked={isSort} onChange={toggleSort} className="h-3.5 w-3.5 rounded border-zinc-300 dark:border-zinc-700" />
-              <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">Ordenar por esta columna</span>
-            </label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input type="checkbox" checked={isSort} onChange={toggleSort} className="h-3.5 w-3.5 rounded border-zinc-300 dark:border-zinc-700" />
+                <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">Ordenar por esta columna</span>
+              </label>
+              {isSort && (
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPatch({ orderBy: { ...display.orderBy!, ascending: !display.orderBy?.ascending } });
+                  }}
+                  className="rounded bg-blue-50 px-2 py-0.5 text-[9px] font-extrabold text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-colors"
+                >
+                  {display.orderBy?.ascending ? "↑ ASC" : "↓ DESC"}
+                </button>
+              )}
+            </div>
             <label className="flex items-center gap-2 cursor-pointer group">
               <input type="checkbox" checked={isTotal} onChange={toggleTotal} className="h-3.5 w-3.5 rounded border-zinc-300 dark:border-zinc-700" />
               <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">Incluir en fila de totales</span>
@@ -435,13 +449,40 @@ function ColumnsManager({
   display: DisplayConfig;
   onPatch: (p: Partial<DisplayConfig>) => void;
 }) {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   const customCols = display.customColumns || [];
-  const allCols = [
-    ...suggestions.map(s => ({ id: s, name: s, isCustom: false })),
-    ...customCols.map(c => ({ id: c.id, name: c.header, isCustom: true }))
-  ];
+  const baseCols = suggestions.map(s => ({ id: s, name: s, isCustom: false }));
+  const customColsList = customCols.map(c => ({ id: c.id, name: c.header, isCustom: true }));
+  let allCols = [...baseCols, ...customColsList];
+
+  // Apply saved order
+  if (display.columnOrder && display.columnOrder.length > 0) {
+    const order = display.columnOrder;
+    allCols.sort((a, b) => {
+      let idxA = order.indexOf(a.name);
+      let idxB = order.indexOf(b.name);
+      if (idxA === -1) idxA = 999;
+      if (idxB === -1) idxB = 999;
+      return idxA - idxB;
+    });
+  }
+
+  const handleDragStart = (id: string) => setDraggedId(id);
+  const handleDrop = (targetId: string) => {
+    if (!draggedId || draggedId === targetId) return;
+    const items = [...allCols];
+    const srcIdx = items.findIndex(i => i.id === draggedId);
+    const dstIdx = items.findIndex(i => i.id === targetId);
+    if (srcIdx === -1 || dstIdx === -1) return;
+    
+    const [removed] = items.splice(srcIdx, 1);
+    items.splice(dstIdx, 0, removed);
+    
+    onPatch({ columnOrder: items.map(i => i.name) });
+    setDraggedId(null);
+  };
 
   const addCustom = () => {
     const id = Math.random().toString(36).substring(7);
@@ -478,16 +519,24 @@ function ColumnsManager({
           {allCols.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(col => {
             const custom = customCols.find(cc => cc.id === col.id);
             return (
-              <ColumnSettingsItem 
+              <div 
                 key={col.id}
-                id={col.id}
-                name={col.name}
-                isCustom={col.isCustom}
-                display={display}
-                baseColumns={suggestions}
-                onPatch={onPatch}
-                onDeleteCustom={custom ? () => onPatch({ customColumns: customCols.filter(c => c.id !== custom.id) }) : undefined}
-              />
+                draggable
+                onDragStart={() => handleDragStart(col.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(col.id)}
+                className={draggedId === col.id ? "opacity-20" : ""}
+              >
+                <ColumnSettingsItem 
+                  id={col.id}
+                  name={col.name}
+                  isCustom={col.isCustom}
+                  display={display}
+                  baseColumns={suggestions}
+                  onPatch={onPatch}
+                  onDeleteCustom={custom ? () => onPatch({ customColumns: customCols.filter(c => c.id !== custom.id) }) : undefined}
+                />
+              </div>
             );
           })}
         </div>
