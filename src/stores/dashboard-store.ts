@@ -28,6 +28,8 @@ type Store = {
   dashboard: DashboardStateShape;
   editing: boolean;
   setEditing: (v: boolean) => void;
+  sidebarOpen: boolean;
+  setSidebarOpen: (v: boolean) => void;
   setDashboardName: (name: string) => void;
   addConnection: (c: Omit<SupabaseConnection, "id">) => string;
   updateConnection: (id: string, patch: Partial<SupabaseConnection>) => void;
@@ -85,6 +87,8 @@ export const useDashboardStore = create<Store>()(
       dashboard: initialDashboard,
       editing: true,
       setEditing: (v) => set({ editing: v }),
+      sidebarOpen: false,
+      setSidebarOpen: (v) => set({ sidebarOpen: v }),
       setDashboardName: (name) =>
         set((s) => ({ dashboard: { ...s.dashboard, name } })),
 
@@ -224,6 +228,7 @@ export const useDashboardStore = create<Store>()(
       partialize: (s) => ({
         connections: s.connections,
         dashboard: s.dashboard,
+        sidebarOpen: s.sidebarOpen,
       }),
       merge: (persistedState: any, currentState) => {
         const s = persistedState as Store;

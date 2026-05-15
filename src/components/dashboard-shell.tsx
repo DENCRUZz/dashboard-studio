@@ -34,8 +34,9 @@ export function DashboardShell() {
   const exportFullState = useDashboardStore((s) => s.exportFullState);
   const importFullState = useDashboardStore((s) => s.importFullState);
 
+  const sidebarOpen = useDashboardStore((s) => s.sidebarOpen);
+  const setSidebarOpen = useDashboardStore((s) => s.setSidebarOpen);
   const [inspectId, setInspectId] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
   const [moveInitial, setMoveInitial] = useState<{ mouseX: number; mouseY: number; initialX: number; initialY: number } | null>(null);
@@ -197,7 +198,7 @@ export function DashboardShell() {
 
   return (
     <div className={`flex flex-1 overflow-hidden ${editing ? 'editing-mode' : ''}`}>
-      <div className={`transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-0'} overflow-hidden border-r border-zinc-200 dark:border-zinc-800`}>
+      <div className={`transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0'} overflow-hidden border-r border-zinc-200 dark:border-zinc-800`}>
         <div className="w-72">
           <ConnectionsPanel />
         </div>
@@ -209,11 +210,11 @@ export function DashboardShell() {
         <header className="relative z-10 flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
           <button
             type="button"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
             className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900"
-            title={isSidebarOpen ? "Ocultar Conexiones" : "Mostrar Conexiones"}
+            title={sidebarOpen ? "Ocultar Conexiones" : "Mostrar Conexiones"}
           >
-            <svg className={`h-4 w-4 transition-transform ${isSidebarOpen ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className={`h-4 w-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>
           </button>
