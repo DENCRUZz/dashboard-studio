@@ -197,9 +197,11 @@ export const useDashboardStore = create<Store>()(
               const newView = {
                 id: vid,
                 name,
-                filters: JSON.parse(JSON.stringify(w.source.filters || [])),
-                advancedFilters: w.source.advancedFilters ? JSON.parse(JSON.stringify(w.source.advancedFilters)) : undefined,
-                display: JSON.parse(JSON.stringify(w.display)),
+                config: {
+                  title: w.title,
+                  source: JSON.parse(JSON.stringify(w.source)),
+                  display: JSON.parse(JSON.stringify(w.display)),
+                },
               };
               return {
                 ...w,
@@ -219,13 +221,11 @@ export const useDashboardStore = create<Store>()(
               const view = w.views?.find((v) => v.id === viewId);
               if (!view) return w;
               
-              const newSource = { ...w.source };
-              newSource.filters = JSON.parse(JSON.stringify(view.filters));
-              newSource.advancedFilters = view.advancedFilters ? JSON.parse(JSON.stringify(view.advancedFilters)) : undefined;
-
               return {
                 ...w,
-                source: newSource,
+                title: view.config.title,
+                source: JSON.parse(JSON.stringify(view.config.source)),
+                display: JSON.parse(JSON.stringify(view.config.display)),
                 activeViewId: viewId,
               };
             }),

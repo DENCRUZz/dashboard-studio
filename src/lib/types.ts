@@ -53,9 +53,12 @@ export type ColorRule = {
 export type WidgetView = {
   id: string;
   name: string;
-  filters: RowFilter[];
-  advancedFilters?: FilterGroup;
-  display: Partial<DisplayConfig>;
+  /** Snapshot of the widget config */
+  config: {
+    title: string;
+    source: DataSource;
+    display: DisplayConfig;
+  };
 };
 
 /** How rows are loaded from PostgREST / Supabase. */
