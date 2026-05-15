@@ -60,6 +60,8 @@ export function DashboardShell() {
     e.target.value = "";
   };
 
+  const handleGridDrop = (e: React.DragEvent) => {
+    e.preventDefault();
     setDraggedId(null);
   };
 
@@ -338,7 +340,6 @@ export function DashboardShell() {
 
               return (
                 <section
-                  key={w.id}
                   key={w.id}
                   className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 
                     ${isDragging ? 'opacity-20 scale-95' : 'opacity-100'} 
