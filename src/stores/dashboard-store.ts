@@ -85,7 +85,7 @@ export const useDashboardStore = create<Store>()(
     (set, get) => ({
       connections: [],
       dashboard: initialDashboard,
-      editing: true,
+      editing: false,
       setEditing: (v) => set({ editing: v }),
       sidebarOpen: false,
       setSidebarOpen: (v) => set({ sidebarOpen: v }),
@@ -220,7 +220,7 @@ export const useDashboardStore = create<Store>()(
         set({
           connections: [],
           dashboard: initialDashboard,
-          editing: true,
+          editing: false,
         }),
     }),
     {
