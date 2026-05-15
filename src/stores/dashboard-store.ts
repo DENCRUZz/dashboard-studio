@@ -35,7 +35,6 @@ type Store = {
   addWidget: (w?: Partial<DashboardWidget>) => string;
   updateWidget: (id: string, patch: WidgetPatch) => void;
   removeWidget: (id: string) => void;
-  moveWidget: (id: string, direction: "up" | "down") => void;
   moveWidgetToPos: (id: string, x: number, y: number) => void;
   
   // Global Filters
