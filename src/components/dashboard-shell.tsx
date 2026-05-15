@@ -33,7 +33,6 @@ function ViewSelector({ widget }: { widget: any }) {
         value={widget.activeViewId || ""}
         onChange={(e) => applyView(widget.id, e.target.value)}
       >
-        <option value="">Original</option>
         {widget.views.map((v: any) => (
           <option key={v.id} value={v.id}>{v.name}</option>
         ))}
