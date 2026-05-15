@@ -65,7 +65,6 @@ function WidgetChart({
   rows: Record<string, unknown>[];
   timeSeries: { name: string; value: number }[] | null;
 }) {
-  const setGlobalFilters = useDashboardStore((s) => s.setGlobalFilters);
   const display = mergeDisplay(widget.display);
   const cat = display.categoryField ?? display.labelField;
   const val = display.valueField;
@@ -244,7 +243,6 @@ function WidgetTable({
   rows: Record<string, unknown>[];
   searchQuery?: string;
 }) {
-  const setGlobalFilters = useDashboardStore((s) => s.setGlobalFilters);
   const display = mergeDisplay(widget.display);
 
   const filteredRows = useMemo(() => {
