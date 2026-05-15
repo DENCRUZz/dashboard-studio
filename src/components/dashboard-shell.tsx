@@ -359,7 +359,7 @@ export function DashboardShell() {
                       <div className="flex items-center gap-2">
                         {editing && (
                           <div 
-                            className="text-zinc-300 dark:text-zinc-700 cursor-move touch-none p-1 -m-1 hover:text-blue-500 transition-colors"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-400 cursor-move touch-none hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-600 dark:hover:bg-blue-900/30 transition-colors"
                             onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
                             onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
                           >
