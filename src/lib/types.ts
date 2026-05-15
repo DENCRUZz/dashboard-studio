@@ -53,7 +53,8 @@ export type ColorRule = {
 export type WidgetView = {
   id: string;
   name: string;
-  filters: FilterGroup;
+  filters: RowFilter[];
+  advancedFilters?: FilterGroup;
   display: Partial<DisplayConfig>;
 };
 

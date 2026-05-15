@@ -194,12 +194,11 @@ export const useDashboardStore = create<Store>()(
             widgets: s.dashboard.widgets.map((w) => {
               if (w.id !== widgetId) return w;
               const vid = newId();
-              // Support both simple filters and advanced filters if present
               const newView = {
                 id: vid,
                 name,
                 filters: JSON.parse(JSON.stringify(w.source.filters || [])),
-                advancedFilters: (w.source as any).advancedFilters ? JSON.parse(JSON.stringify((w.source as any).advancedFilters)) : undefined,
+                advancedFilters: w.source.advancedFilters ? JSON.parse(JSON.stringify(w.source.advancedFilters)) : undefined,
                 display: JSON.parse(JSON.stringify(w.display)),
               };
               return {
@@ -222,9 +221,7 @@ export const useDashboardStore = create<Store>()(
               
               const newSource = { ...w.source };
               newSource.filters = JSON.parse(JSON.stringify(view.filters));
-              if (view.advancedFilters) {
-                (newSource as any).advancedFilters = JSON.parse(JSON.stringify(view.advancedFilters));
-              }
+              newSource.advancedFilters = view.advancedFilters ? JSON.parse(JSON.stringify(view.advancedFilters)) : undefined;
 
               return {
                 ...w,
