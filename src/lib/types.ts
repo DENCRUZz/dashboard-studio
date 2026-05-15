@@ -219,6 +219,8 @@ export function mergeDisplay(
 }
 
 export const defaultLayout = (): WidgetLayout => ({
-  colSpan: 2,
-  rowSpan: 1,
+  x: 0,
+  y: 0,
+  colSpan: 6,
+  rowSpan: 4,
 });
