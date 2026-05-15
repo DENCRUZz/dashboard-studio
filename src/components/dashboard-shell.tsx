@@ -84,13 +84,15 @@ export function DashboardShell() {
     setDraggedId(null);
   };
 
-  const handleResizeStart = (e: React.MouseEvent, widgetId: string, layout: WidgetLayout) => {
-    e.preventDefault();
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, widgetId: string, layout: WidgetLayout) => {
     e.stopPropagation();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
     setResizingId(widgetId);
     setResizeInitial({
-      x: e.clientX,
-      y: e.clientY,
+      x: clientX,
+      y: clientY,
       colSpan: layout.colSpan,
       rowSpan: layout.rowSpan,
     });
@@ -99,17 +101,20 @@ export function DashboardShell() {
   useEffect(() => {
     if (!resizingId || !resizeInitial) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       const grid = gridRef.current;
       if (!grid) return;
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
       const rect = grid.getBoundingClientRect();
       const colWidth = (rect.width - (11 * 24)) / 12;
       const rowHeight = 60;
       const gap = 24;
 
-      const deltaX = e.clientX - resizeInitial.x;
-      const deltaY = e.clientY - resizeInitial.y;
+      const deltaX = clientX - resizeInitial.x;
+      const deltaY = clientY - resizeInitial.y;
 
       const newColSpan = Math.max(1, Math.min(12, Math.round(resizeInitial.colSpan + deltaX / (colWidth + gap))));
       const newRowSpan = Math.max(1, Math.round(resizeInitial.rowSpan + deltaY / (rowHeight + gap)));
@@ -117,16 +122,21 @@ export function DashboardShell() {
       updateWidget(resizingId, { layout: { colSpan: newColSpan, rowSpan: newRowSpan } });
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       setResizingId(null);
       setResizeInitial(null);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleEnd);
+    
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
     };
   }, [resizingId, resizeInitial, updateWidget]);
 
@@ -350,10 +360,11 @@ export function DashboardShell() {
 
                   {editing && (
                     <div 
-                      className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center group/resize z-30"
+                      className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize flex items-center justify-center group/resize z-30 touch-none"
                       onMouseDown={(e) => handleResizeStart(e, w.id, w.layout)}
+                      onTouchStart={(e) => handleResizeStart(e, w.id, w.layout)}
                     >
-                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 group-hover/resize:bg-blue-500 transition-colors" />
+                      <div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700 group-hover/resize:bg-blue-500 transition-colors" />
                     </div>
                   )}
                 </section>
