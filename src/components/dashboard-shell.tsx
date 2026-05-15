@@ -65,6 +65,14 @@ export function DashboardShell() {
   const [resizeInitial, setResizeInitial] = useState<{ x: number; y: number; colSpan: number; rowSpan: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const inspected = dashboard.widgets.find((w) => w.id === inspectId);
 
@@ -337,10 +345,10 @@ export function DashboardShell() {
                     ${w.layout.mobileWidth === 'full' ? 'col-span-2' : 'col-span-1 aspect-square md:aspect-auto'}
                   `}
                   style={{
-                    gridColumnStart: typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : (w.layout.x ?? 0) + 1,
-                    gridRowStart: typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : (w.layout.y ?? 0) + 1,
-                    gridColumnEnd: typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : `span ${w.layout.colSpan || 6}`,
-                    gridRowEnd: typeof window !== 'undefined' && window.innerWidth < 768 ? (w.layout.mobileWidth === 'full' ? 'span 4' : 'auto') : `span ${w.layout.rowSpan || 4}`,
+                    gridColumnStart: isMobile ? 'auto' : (w.layout.x ?? 0) + 1,
+                    gridRowStart: isMobile ? 'auto' : (w.layout.y ?? 0) + 1,
+                    gridColumnEnd: isMobile ? 'auto' : `span ${w.layout.colSpan || 6}`,
+                    gridRowEnd: isMobile ? (w.layout.mobileWidth === 'full' ? 'span 4' : 'auto') : `span ${w.layout.rowSpan || 4}`,
                     backgroundColor: w.display.colorBackground,
                     color: w.display.colorText,
                   }}
