@@ -546,17 +546,24 @@ function ColumnsManager({
                 onDragStart={() => handleDragStart(col.id)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => handleDrop(col.id)}
-                className={draggedId === col.id ? "opacity-20" : ""}
+                className={`flex items-center gap-2 ${draggedId === col.id ? "opacity-20" : ""} select-none touch-none active:bg-zinc-100 dark:active:bg-zinc-900`}
               >
-                <ColumnSettingsItem 
-                  id={col.id}
-                  name={col.name}
-                  isCustom={col.isCustom}
-                  display={display}
-                  baseColumns={suggestions}
-                  onPatch={onPatch}
-                  onDeleteCustom={custom ? () => onPatch({ customColumns: customCols.filter(c => c.id !== custom.id) }) : undefined}
-                />
+                <div className="flex shrink-0 cursor-grab items-center justify-center py-3 pl-3 text-zinc-300 hover:text-zinc-500">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <ColumnSettingsItem 
+                    id={col.id}
+                    name={col.name}
+                    isCustom={col.isCustom}
+                    display={display}
+                    baseColumns={suggestions}
+                    onPatch={onPatch}
+                    onDeleteCustom={custom ? () => onPatch({ customColumns: customCols.filter(c => c.id !== custom.id) }) : undefined}
+                  />
+                </div>
               </div>
             );
           })}
