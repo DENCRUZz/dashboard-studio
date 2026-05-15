@@ -730,7 +730,22 @@ export function WidgetInspector({ widget, onClose }: { widget: DashboardWidget; 
                   Completo
                 </button>
               </div>
-              <p className="mt-2 text-[9px] text-zinc-400">En móvil, 'Mitad' forzará un formato cuadrado.</p>
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Alto en Móvil</span>
+                  <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{widget.layout.mobileRowSpan || widget.layout.rowSpan || 4} filas</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="2" 
+                  max="12" 
+                  step="1"
+                  className="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-700"
+                  value={widget.layout.mobileRowSpan || widget.layout.rowSpan || 4}
+                  onChange={(e) => patch({ layout: { ...widget.layout, mobileRowSpan: parseInt(e.target.value) } })}
+                />
+              </div>
+              <p className="mt-2 text-[9px] text-zinc-400">Afecta cuántas filas ocupa el bloque en celulares.</p>
             </section>
 
             <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">

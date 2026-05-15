@@ -176,6 +176,7 @@ export type WidgetLayout = {
   rowSpan: number;
   /** 'half' = 1 col in mobile (square), 'full' = 2 cols in mobile */
   mobileWidth?: 'half' | 'full';
+  mobileRowSpan?: number;
 };
 
 export type DashboardWidget = {

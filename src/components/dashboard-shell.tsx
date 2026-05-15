@@ -342,13 +342,15 @@ export function DashboardShell() {
                   className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 md:p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 
                     ${isDragging ? 'opacity-20 scale-95' : 'opacity-100'} 
                     ${editing ? 'hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-500/30' : ''}
-                    ${w.layout.mobileWidth === 'full' ? 'col-span-2' : 'col-span-1 aspect-square md:aspect-auto'}
+                    ${w.layout.mobileWidth === 'full' ? 'col-span-2' : 'col-span-1'}
                   `}
                   style={{
                     gridColumnStart: isMobile ? 'auto' : (w.layout.x ?? 0) + 1,
                     gridRowStart: isMobile ? 'auto' : (w.layout.y ?? 0) + 1,
                     gridColumnEnd: isMobile ? 'auto' : `span ${w.layout.colSpan || 6}`,
-                    gridRowEnd: isMobile ? (w.layout.mobileWidth === 'full' ? 'span 4' : 'auto') : `span ${w.layout.rowSpan || 4}`,
+                    gridRowEnd: isMobile 
+                      ? `span ${w.layout.mobileRowSpan || w.layout.rowSpan || 4}` 
+                      : `span ${w.layout.rowSpan || 4}`,
                     backgroundColor: w.display.colorBackground,
                     color: w.display.colorText,
                   }}
@@ -358,12 +360,13 @@ export function DashboardShell() {
                       <div className="flex items-center gap-2">
                         {editing && (
                           <div 
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-400 cursor-move touch-none hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-600 dark:hover:bg-blue-900/30 transition-colors"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 cursor-move touch-none shadow-sm hover:bg-blue-600 hover:text-white dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-600 transition-all active:scale-95"
                             onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
                             onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
+                            title="Arrastrar para mover"
                           >
-                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M7 10h2v2H7v-2zm0 4h2v2H7v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2z" />
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                           </div>
                         )}
