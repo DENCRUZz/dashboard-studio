@@ -195,6 +195,7 @@ function JSSnippets({ columns, onInsert }: { columns: string[]; onInsert: (s: st
 }
 
 function ColumnSettingsItem({
+  id,
   name,
   isCustom,
   display,
@@ -202,6 +203,7 @@ function ColumnSettingsItem({
   onPatch,
   onDeleteCustom,
 }: {
+  id: string;
   name: string;
   isCustom?: boolean;
   display: DisplayConfig;
@@ -268,7 +270,7 @@ function ColumnSettingsItem({
     .map((r, i) => ({ ...r, globalIndex: i }))
     .filter(r => r.column === name);
 
-  const customCol = display.customColumns.find(c => c.header === name);
+  const customCol = display.customColumns.find(c => c.id === id);
   const isDuplicateName = isCustom && (baseColumns.includes(name) || display.customColumns.some(c => c.header === name && c.id !== customCol?.id));
 
   return (
@@ -436,9 +438,10 @@ function ColumnsManager({
   const [searchTerm, setSearchTerm] = useState("");
   
   const customCols = display.customColumns || [];
-  const allColNames = Array.from(new Set([...suggestions, ...customCols.map(c => c.header)]));
-  
-  const filtered = allColNames.filter(c => c.toLowerCase().includes(searchTerm.toLowerCase()));
+  const allCols = [
+    ...suggestions.map(s => ({ id: s, name: s, isCustom: false })),
+    ...customCols.map(c => ({ id: c.id, name: c.header, isCustom: true }))
+  ];
 
   const addCustom = () => {
     const id = Math.random().toString(36).substring(7);
@@ -472,16 +475,14 @@ function ColumnsManager({
         </div>
         
         <div className="max-h-[500px] overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/50">
-          {filtered.length === 0 && (
-            <p className="p-8 text-center text-xs text-zinc-400 italic">No se encontraron columnas.</p>
-          )}
-          {filtered.map(name => {
-            const custom = customCols.find(c => c.header === name);
+          {allCols.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(col => {
+            const custom = customCols.find(cc => cc.id === col.id);
             return (
               <ColumnSettingsItem 
-                key={name}
-                name={name}
-                isCustom={!!custom}
+                key={col.id}
+                id={col.id}
+                name={col.name}
+                isCustom={col.isCustom}
                 display={display}
                 baseColumns={suggestions}
                 onPatch={onPatch}
@@ -644,21 +645,7 @@ export function WidgetInspector({ widget, onClose }: { widget: DashboardWidget; 
             </section>
 
             <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Ajustes de Diseño</p>
-              <div className="grid grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Ancho (W)</span>
-                  <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={widget.layout.colSpan} onChange={(e) => patch({ layout: { ...widget.layout, colSpan: Number(e.target.value) as any } })}>
-                    <option value={1}>1 col</option><option value={2}>2 cols</option><option value={3}>3 cols</option><option value={4}>4 cols</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Alto (H)</span>
-                  <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={widget.layout.rowSpan} onChange={(e) => patch({ layout: { ...widget.layout, rowSpan: Number(e.target.value) as any } })}>
-                    <option value={1}>1 fila</option><option value={2}>2 filas</option><option value={3}>3 filas</option><option value={4}>4 filas</option>
-                  </select>
-                </label>
-              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Opciones de Bloque</p>
               <div className="mt-5 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative inline-flex items-center">

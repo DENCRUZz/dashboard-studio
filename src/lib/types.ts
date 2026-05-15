@@ -167,8 +167,10 @@ export type DisplayConfig = {
 };
 
 export type WidgetLayout = {
-  colSpan: 1 | 2 | 3 | 4;
-  rowSpan: 1 | 2 | 3 | 4;
+  x: number;
+  y: number;
+  colSpan: number;
+  rowSpan: number;
 };
 
 export type DashboardWidget = {

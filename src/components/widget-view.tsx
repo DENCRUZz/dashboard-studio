@@ -120,7 +120,7 @@ function WidgetChart({
 
   if (display.visualization === "pie") {
     return (
-      <div className="h-64 w-full">
+      <div className="flex-1 min-h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -175,7 +175,7 @@ function WidgetChart({
 
   if (display.visualization === "line") {
     return (
-      <div className="h-56 w-full">
+      <div className="flex-1 min-h-[180px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -211,7 +211,7 @@ function WidgetChart({
   }
 
   return (
-    <div className="h-56 w-full">
+    <div className="flex-1 min-h-[180px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -289,7 +289,7 @@ function WidgetTable({
   const formatCell = (k: string, v: unknown) => formatCellValue(v, display, k);
 
   return (
-    <div className="max-h-[500px] overflow-auto rounded-md border border-zinc-200 dark:border-zinc-800">
+    <div className="flex-1 overflow-auto min-h-0 rounded-md border border-zinc-200 dark:border-zinc-800">
       <table className="w-full text-left text-xs border-collapse">
         <thead 
           className="sticky top-0 z-10 bg-zinc-100 dark:bg-zinc-900"
@@ -410,7 +410,8 @@ function WidgetCards({
   }, [rows, searchQuery]);
 
   return (
-    <ul className="grid gap-3 sm:grid-cols-2">
+    <div className="flex-1 overflow-auto min-h-0">
+      <ul className="grid gap-3 sm:grid-cols-2">
       {filteredRows.map((r, i) => {
         const rule = display.colorRules.find(rule => checkColorRule(r, rule));
         const cardStyle = rule ? {
@@ -452,7 +453,8 @@ function WidgetCards({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }
 
@@ -583,7 +585,7 @@ export function WidgetView({
     widget.display.visualization === "pie"
   ) {
     return (
-      <div>
+      <div className="flex-1 min-h-0 flex flex-col">
         <WidgetChart
           widget={widget}
           rows={rows}
@@ -596,7 +598,7 @@ export function WidgetView({
   const showSearch = display.enableSearch && (display.visualization === "table" || display.visualization === "cards");
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-auto">
       {showSearch && (
         <div className="relative">
           <input

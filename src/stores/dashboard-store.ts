@@ -36,6 +36,7 @@ type Store = {
   updateWidget: (id: string, patch: WidgetPatch) => void;
   removeWidget: (id: string) => void;
   moveWidget: (id: string, direction: "up" | "down") => void;
+  moveWidgetToPos: (id: string, x: number, y: number) => void;
   
   // Global Filters
   setGlobalFilters: (filters: FilterGroup) => void;
@@ -71,7 +72,7 @@ function defaultWidget(
     connectionId: connId,
     source: defaultTableSource(),
     display: defaultDisplay(),
-    layout: defaultLayout(),
+    layout: { x: 0, y: 0, colSpan: 6, rowSpan: 4 },
     views: [],
   };
 }
@@ -172,16 +173,15 @@ export const useDashboardStore = create<Store>()(
             widgets: s.dashboard.widgets.filter((w) => w.id !== id),
           },
         })),
-      moveWidget: (id, direction) =>
-        set((s) => {
-          const idx = s.dashboard.widgets.findIndex((w) => w.id === id);
-          if (idx < 0) return s;
-          const next = [...s.dashboard.widgets];
-          const swapWith = direction === "up" ? idx - 1 : idx + 1;
-          if (swapWith < 0 || swapWith >= next.length) return s;
-          [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
-          return { dashboard: { ...s.dashboard, widgets: next } };
-        }),
+      moveWidgetToPos: (id, x, y) =>
+        set((s) => ({
+          dashboard: {
+            ...s.dashboard,
+            widgets: s.dashboard.widgets.map((w) =>
+              w.id === id ? { ...w, layout: { ...w.layout, x, y } } : w
+            ),
+          },
+        })),
 
       setGlobalFilters: (filters) =>
         set((s) => ({

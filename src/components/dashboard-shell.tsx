@@ -27,15 +27,18 @@ export function DashboardShell() {
   const setDashboardName = useDashboardStore((s) => s.setDashboardName);
   const connections = useDashboardStore((s) => s.connections);
   const addWidget = useDashboardStore((s) => s.addWidget);
+  const updateWidget = useDashboardStore((s) => s.updateWidget);
   const removeWidget = useDashboardStore((s) => s.removeWidget);
-  const moveWidget = useDashboardStore((s) => s.moveWidget);
+  const moveWidgetToPos = useDashboardStore((s) => s.moveWidgetToPos);
   const exportFullState = useDashboardStore((s) => s.exportFullState);
   const importFullState = useDashboardStore((s) => s.importFullState);
   const clearGlobalFilters = useDashboardStore((s) => s.clearGlobalFilters);
 
   const [inspectId, setInspectId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const inspected = dashboard.widgets.find((w) => w.id === inspectId);
 
@@ -52,16 +55,47 @@ export function DashboardShell() {
     e.target.value = "";
   };
 
+  const handleDragStart = (id: string) => {
+    if (!editing) return;
+    setDraggedId(id);
+  };
+
+  const handleGridDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!editing || !draggedId || !gridRef.current) return;
+
+    const rect = gridRef.current.getBoundingClientRect();
+    const xPx = e.clientX - rect.left;
+    const yPx = e.clientY - rect.top;
+
+    // Calculate grid coordinates
+    // Columns: 12 columns, total width = rect.width. Gap = 24px (gap-6)
+    const colWidth = (rect.width - (11 * 24)) / 12;
+    const rowHeight = 60 + 24; // 60px height + 24px gap
+
+    const x = Math.floor(xPx / (colWidth + 24));
+    const y = Math.floor(yPx / rowHeight);
+
+    // Clamp to valid range
+    const clampedX = Math.max(0, Math.min(11, x));
+    const clampedY = Math.max(0, y);
+
+    moveWidgetToPos(draggedId, clampedX, clampedY);
+    setDraggedId(null);
+  };
+
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className={`flex flex-1 overflow-hidden ${editing ? 'editing-mode' : ''}`}>
       <div className={`transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-0'} overflow-hidden border-r border-zinc-200 dark:border-zinc-800`}>
         <div className="w-72">
           <ConnectionsPanel />
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-center gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+      <div className="flex min-w-0 flex-1 flex-col relative">
+        {editing && <div className="grid-canvas absolute inset-0 pointer-events-none z-0" />}
+        
+        <header className="relative z-10 flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
           <button
             type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -87,20 +121,20 @@ export function DashboardShell() {
             <button
               type="button"
               onClick={() => setEditing(!editing)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                 editing
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                  : "border border-zinc-300 dark:border-zinc-700"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                  : "border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-900"
               }`}
             >
-              {editing ? "Modo edición" : "Solo lectura"}
+              {editing ? "Finalizar Edición" : "Personalizar Tablero"}
             </button>
             {editing && (
               <>
                 <button
                   type="button"
                   onClick={() => addWidget()}
-                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+                  className="rounded-md bg-white border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-700"
                 >
                   + Bloque
                 </button>
@@ -139,7 +173,7 @@ export function DashboardShell() {
           </div>
         </header>
 
-        <div className="border-b border-zinc-200 bg-zinc-50/50 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-900/30">
+        <div className="relative z-10 border-b border-zinc-200 bg-zinc-50/50 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-900/30">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-xs font-medium shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
               <svg className="h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -171,86 +205,124 @@ export function DashboardShell() {
           </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto p-4">
+        <main 
+          className="relative z-10 flex-1 overflow-y-auto p-6"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleGridDrop}
+        >
           {dashboard.widgets.length === 0 && (
             <div className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
               {editing
-                ? "Añade una conexión a la izquierda y pulsa «+ Bloque» para montar tu tablero."
+                ? "Arrastra conexiones aquí y pulsa «+ Bloque» para comenzar el diseño."
                 : "No hay bloques en este tablero."}
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {dashboard.widgets.map((w, index) => {
+          <div 
+            ref={gridRef}
+            className="grid grid-cols-12 gap-6 [grid-auto-rows:60px]"
+          >
+            {dashboard.widgets.map((w) => {
               const conn = connections.find((c) => c.id === w.connectionId);
+              const isDragging = draggedId === w.id;
+
               return (
                 <section
                   key={w.id}
-                  className={`rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 ${colClass[w.layout.colSpan]} ${rowMinClass[w.layout.rowSpan]}`}
+                  draggable={editing}
+                  onDragStart={() => handleDragStart(w.id)}
+                  onDragEnd={() => { setDraggedId(null); }}
+                  className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 
+                    ${isDragging ? 'opacity-20 scale-95' : 'opacity-100'} 
+                    ${editing ? 'cursor-grab active:cursor-grabbing hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-500/30' : ''}
+                  `}
                   style={{
+                    gridColumnStart: (w.layout.x ?? 0) + 1,
+                    gridRowStart: (w.layout.y ?? 0) + 1,
+                    gridColumnEnd: `span ${w.layout.colSpan || 6}`,
+                    gridRowEnd: `span ${w.layout.rowSpan || 4}`,
                     backgroundColor: w.display.colorBackground,
                     color: w.display.colorText,
                   }}
                 >
-                  <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="mb-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h2 
-                        className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100"
-                        style={{ color: w.display.colorText }}
-                      >
-                        {w.title}
-                      </h2>
+                      <div className="flex items-center gap-2">
+                        {editing && (
+                          <div className="text-zinc-300 dark:text-zinc-700">
+                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M7 10h2v2H7v-2zm0 4h2v2H7v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2z" />
+                            </svg>
+                          </div>
+                        )}
+                        <h2 
+                          className="truncate text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
+                          style={{ color: w.display.colorText }}
+                        >
+                          {w.title}
+                        </h2>
+                      </div>
                       {conn && (
                         <p 
-                          className="truncate text-xs text-zinc-500"
-                          style={{ color: w.display.colorText ? `${w.display.colorText}cc` : undefined }}
+                          className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wider text-zinc-400"
+                          style={{ color: w.display.colorText ? `${w.display.colorText}aa` : undefined }}
                         >
                           {conn.name}
                         </p>
                       )}
                     </div>
                     {editing && (
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        <div className="flex gap-1">
-                          <button
-                            type="button"
-                            className="rounded px-1.5 text-xs text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
-                            onClick={() => moveWidget(w.id, "up")}
-                            disabled={index === 0}
-                            aria-label="Subir"
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded px-1.5 text-xs text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
-                            onClick={() => moveWidget(w.id, "down")}
-                            disabled={index === dashboard.widgets.length - 1}
-                            aria-label="Bajar"
-                          >
-                            ↓
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-zinc-700 underline dark:text-zinc-300"
-                            onClick={() => setInspectId(w.id)}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            className="text-xs text-red-600"
-                            onClick={() => removeWidget(w.id)}
-                          >
-                            Quitar
-                          </button>
-                        </div>
+                      <div className="flex shrink-0 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-900/30"
+                          onClick={() => setInspectId(w.id)}
+                          title="Configurar"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+                          onClick={() => removeWidget(w.id)}
+                          title="Eliminar"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     )}
                   </div>
-                  <WidgetView widget={w} connection={conn} />
+                  
+                  <div className="flex-1 min-h-0 relative flex flex-col">
+                    <WidgetView widget={w} connection={conn} />
+                  </div>
+
+                  {editing && (
+                    <div className="absolute -right-2 -bottom-2 flex gap-1 bg-white dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xl z-20">
+                      <button 
+                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, colSpan: Math.max(1, w.layout.colSpan - 1) } })}
+                      >↔-</button>
+                      <button 
+                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, colSpan: Math.min(12, w.layout.colSpan + 1) } })}
+                      >↔+</button>
+                      <div className="w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
+                      <button 
+                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, rowSpan: Math.max(1, w.layout.rowSpan - 1) } })}
+                      >↕-</button>
+                      <button 
+                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, rowSpan: Math.min(20, w.layout.rowSpan + 1) } })}
+                      >↕+</button>
+                    </div>
+                  )}
                 </section>
               );
             })}
