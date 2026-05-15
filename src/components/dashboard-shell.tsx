@@ -60,29 +60,6 @@ export function DashboardShell() {
     e.target.value = "";
   };
 
-  const handleDragStart = (id: string) => {
-    if (!editing) return;
-    setDraggedId(id);
-  };
-
-  const handleGridDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!editing || !draggedId || !gridRef.current) return;
-
-    const rect = gridRef.current.getBoundingClientRect();
-    const xPx = e.clientX - rect.left;
-    const yPx = e.clientY - rect.top;
-
-    const colWidth = (rect.width - (11 * 24)) / 12;
-    const rowHeight = 60 + 24; 
-
-    const x = Math.floor(xPx / (colWidth + 24));
-    const y = Math.floor(yPx / rowHeight);
-
-    const clampedX = Math.max(0, Math.min(11, x));
-    const clampedY = Math.max(0, y);
-
-    moveWidgetToPos(draggedId, clampedX, clampedY);
     setDraggedId(null);
   };
 
@@ -362,12 +339,10 @@ export function DashboardShell() {
               return (
                 <section
                   key={w.id}
-                  draggable={editing}
-                  onDragStart={() => handleDragStart(w.id)}
-                  onDragEnd={() => { setDraggedId(null); }}
+                  key={w.id}
                   className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 
                     ${isDragging ? 'opacity-20 scale-95' : 'opacity-100'} 
-                    ${editing ? 'cursor-grab active:cursor-grabbing hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-500/30' : ''}
+                    ${editing ? 'hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-500/30' : ''}
                   `}
                   style={{
                     gridColumnStart: (w.layout.x ?? 0) + 1,
