@@ -38,6 +38,8 @@ export function DashboardShell() {
   const [inspectId, setInspectId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [moveInitial, setMoveInitial] = useState<{ mouseX: number; mouseY: number; initialX: number; initialY: number } | null>(null);
   const [resizingId, setResizingId] = useState<string | null>(null);
   const [resizeInitial, setResizeInitial] = useState<{ x: number; y: number; colSpan: number; rowSpan: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -101,44 +103,119 @@ export function DashboardShell() {
   useEffect(() => {
     if (!resizingId || !resizeInitial) return;
 
-    const handleMove = (e: MouseEvent | TouchEvent) => {
-      const grid = gridRef.current;
-      if (!grid) return;
-
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-      const rect = grid.getBoundingClientRect();
-      const colWidth = (rect.width - (11 * 24)) / 12;
-      const rowHeight = 60;
-      const gap = 24;
-
-      const deltaX = clientX - resizeInitial.x;
-      const deltaY = clientY - resizeInitial.y;
-
-      const newColSpan = Math.max(1, Math.min(12, Math.round(resizeInitial.colSpan + deltaX / (colWidth + gap))));
-      const newRowSpan = Math.max(1, Math.round(resizeInitial.rowSpan + deltaY / (rowHeight + gap)));
-
-      updateWidget(resizingId, { layout: { colSpan: newColSpan, rowSpan: newRowSpan } });
-    };
-
     const handleEnd = () => {
       setResizingId(null);
       setResizeInitial(null);
+      setMovingId(null);
+      setMoveInitial(null);
     };
 
-    window.addEventListener("mousemove", handleMove);
+    const handleMouseMove = (e: MouseEvent) => {
+      if (resizingId && resizeInitial) {
+        const grid = gridRef.current;
+        if (!grid) return;
+        const rect = grid.getBoundingClientRect();
+        const colWidth = (rect.width - (11 * 24)) / 12;
+        const rowHeight = 60;
+        const gap = 24;
+
+        const deltaX = e.clientX - resizeInitial.x;
+        const deltaY = e.clientY - resizeInitial.y;
+
+        const newColSpan = Math.max(1, Math.min(12, Math.round(resizeInitial.colSpan + deltaX / (colWidth + gap))));
+        const newRowSpan = Math.max(1, Math.round(resizeInitial.rowSpan + deltaY / (rowHeight + gap)));
+
+        updateWidget(resizingId, { layout: { colSpan: newColSpan, rowSpan: newRowSpan } });
+      }
+
+      if (movingId && moveInitial) {
+        const grid = gridRef.current;
+        if (!grid) return;
+        const rect = grid.getBoundingClientRect();
+        const colWidth = (rect.width - (11 * 24)) / 12;
+        const rowHeight = 60;
+        const gap = 24;
+
+        const deltaX = e.clientX - moveInitial.mouseX;
+        const deltaY = e.clientY - moveInitial.mouseY;
+
+        const newX = Math.max(0, Math.min(11, Math.round(moveInitial.initialX + deltaX / (colWidth + gap))));
+        const newY = Math.max(0, Math.round(moveInitial.initialY + deltaY / (rowHeight + gap)));
+
+        moveWidgetToPos(movingId, newX, newY);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (resizingId && resizeInitial) {
+        e.preventDefault(); // Prevent scroll while resizing
+        const grid = gridRef.current;
+        if (!grid) return;
+        const rect = grid.getBoundingClientRect();
+        const colWidth = (rect.width - (11 * 24)) / 12;
+        const rowHeight = 60;
+        const gap = 24;
+
+        const clientX = e.touches[0].clientX;
+        const clientY = e.touches[0].clientY;
+
+        const deltaX = clientX - resizeInitial.x;
+        const deltaY = clientY - resizeInitial.y;
+
+        const newColSpan = Math.max(1, Math.min(12, Math.round(resizeInitial.colSpan + deltaX / (colWidth + gap))));
+        const newRowSpan = Math.max(1, Math.round(resizeInitial.rowSpan + deltaY / (rowHeight + gap)));
+
+        updateWidget(resizingId, { layout: { colSpan: newColSpan, rowSpan: newRowSpan } });
+      }
+
+      if (movingId && moveInitial) {
+        e.preventDefault(); // Prevent scroll while moving
+        const grid = gridRef.current;
+        if (!grid) return;
+        const rect = grid.getBoundingClientRect();
+        const colWidth = (rect.width - (11 * 24)) / 12;
+        const rowHeight = 60;
+        const gap = 24;
+
+        const clientX = e.touches[0].clientX;
+        const clientY = e.touches[0].clientY;
+
+        const deltaX = clientX - moveInitial.mouseX;
+        const deltaY = clientY - moveInitial.mouseY;
+
+        const newX = Math.max(0, Math.min(11, Math.round(moveInitial.initialX + deltaX / (colWidth + gap))));
+        const newY = Math.max(0, Math.round(moveInitial.initialY + deltaY / (rowHeight + gap)));
+
+        moveWidgetToPos(movingId, newX, newY);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleEnd);
-    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
     window.addEventListener("touchend", handleEnd);
     
     return () => {
-      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleEnd);
-      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleEnd);
     };
-  }, [resizingId, resizeInitial, updateWidget]);
+  }, [resizingId, resizeInitial, movingId, moveInitial, updateWidget, moveWidgetToPos]);
+
+  const handleMoveStart = (e: React.MouseEvent | React.TouchEvent, widgetId: string, layout: WidgetLayout) => {
+    if (!editing) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setMovingId(widgetId);
+    setMoveInitial({
+      mouseX: clientX,
+      mouseY: clientY,
+      initialX: layout.x,
+      initialY: layout.y,
+    });
+  };
 
   return (
     <div className={`flex flex-1 overflow-hidden ${editing ? 'editing-mode' : ''}`}>
@@ -305,7 +382,11 @@ export function DashboardShell() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         {editing && (
-                          <div className="text-zinc-300 dark:text-zinc-700">
+                          <div 
+                            className="text-zinc-300 dark:text-zinc-700 cursor-move touch-none p-1 -m-1 hover:text-blue-500 transition-colors"
+                            onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
+                            onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
+                          >
                             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                               <path d="M7 10h2v2H7v-2zm0 4h2v2H7v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2z" />
                             </svg>
