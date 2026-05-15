@@ -219,13 +219,18 @@ export const useDashboardStore = create<Store>()(
             widgets: s.dashboard.widgets.map((w) => {
               if (w.id !== widgetId) return w;
               const view = w.views?.find((v) => v.id === viewId);
-              if (!view) return w;
+              if (!view) return { ...w, activeViewId: undefined };
               
+              // Robust restoration of config
               return {
                 ...w,
-                title: view.config.title,
-                source: JSON.parse(JSON.stringify(view.config.source)),
-                display: JSON.parse(JSON.stringify(view.config.display)),
+                title: view.config?.title ?? w.title,
+                source: view.config?.source 
+                  ? JSON.parse(JSON.stringify(view.config.source))
+                  : w.source,
+                display: view.config?.display
+                  ? JSON.parse(JSON.stringify(view.config.display))
+                  : w.display,
                 activeViewId: viewId,
               };
             }),
