@@ -561,9 +561,8 @@ export function WidgetView({
       <div className="flex flex-col justify-center py-1">
         <p className="text-[10px] uppercase font-bold tracking-wider opacity-60" style={{ color: display.colorText }}>{label}</p>
         <p 
-          className="mt-1 text-2xl sm:text-3xl font-black tabular-nums tracking-tight truncate"
+          className="mt-1 text-2xl sm:text-3xl font-black tabular-nums tracking-tight break-words leading-tight"
           style={{ color: display.colorAccent || display.colorText }}
-          title={shown}
         >
           {shown}
         </p>

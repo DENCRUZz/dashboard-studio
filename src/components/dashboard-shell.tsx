@@ -375,7 +375,7 @@ export function DashboardShell() {
                           </div>
                         )}
                         <h2 
-                          className="truncate text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
+                          className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 whitespace-normal leading-tight"
                           style={{ color: w.display.colorText }}
                         >
                           {w.title}
