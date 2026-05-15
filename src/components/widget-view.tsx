@@ -167,14 +167,17 @@ function WidgetChart({
     return (
       <div className="flex-1 min-h-[180px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis
-              tick={{ fontSize: 11 }}
+              width={70}
+              tick={{ fontSize: 10, fill: display.colorText || 'currentColor' }}
               tickFormatter={(v) =>
                 typeof v === "number" ? fmt(v) : String(v)
               }
+              axisLine={false}
+              tickLine={false}
             />
             <Tooltip 
               formatter={formatTooltip} 
@@ -203,14 +206,17 @@ function WidgetChart({
   return (
     <div className="flex-1 min-h-[180px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
+        <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="name" tick={{ fontSize: 11, fill: display.colorText || 'currentColor' }} />
           <YAxis
-            tick={{ fontSize: 11, fill: display.colorText || 'currentColor' }}
+            width={70}
+            tick={{ fontSize: 10, fill: display.colorText || 'currentColor' }}
             tickFormatter={(v) =>
               typeof v === "number" ? fmt(v) : String(v)
             }
+            axisLine={false}
+            tickLine={false}
           />
           <Tooltip 
             formatter={formatTooltip} 
@@ -552,11 +558,12 @@ export function WidgetView({
           )
         : String(agg);
     return (
-      <div>
-        <p className="text-xs uppercase tracking-wide opacity-70" style={{ color: display.colorText }}>{label}</p>
+      <div className="flex flex-col justify-center py-1">
+        <p className="text-[10px] uppercase font-bold tracking-wider opacity-60" style={{ color: display.colorText }}>{label}</p>
         <p 
-          className="mt-1 text-3xl font-semibold tabular-nums"
+          className="mt-1 text-2xl sm:text-3xl font-black tabular-nums tracking-tight truncate"
           style={{ color: display.colorAccent || display.colorText }}
+          title={shown}
         >
           {shown}
         </p>
