@@ -564,6 +564,7 @@ export function WidgetView({
         ? formatDisplayNumber(
             typeof agg === "number" ? agg : num,
             display,
+            field
           )
         : String(agg);
     return (
