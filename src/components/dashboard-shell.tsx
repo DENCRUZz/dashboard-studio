@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type ChangeEventHandler } from "react";
+import { useRef, useState, useEffect, type ChangeEventHandler } from "react";
+import { type WidgetLayout } from "@/lib/types";
 import { ConnectionsPanel } from "@/components/connections-panel";
 import { WidgetInspector } from "@/components/widget-inspector";
 import { WidgetView } from "@/components/widget-view";
@@ -37,6 +38,8 @@ export function DashboardShell() {
   const [inspectId, setInspectId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [resizingId, setResizingId] = useState<string | null>(null);
+  const [resizeInitial, setResizeInitial] = useState<{ x: number; y: number; colSpan: number; rowSpan: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -68,21 +71,64 @@ export function DashboardShell() {
     const xPx = e.clientX - rect.left;
     const yPx = e.clientY - rect.top;
 
-    // Calculate grid coordinates
-    // Columns: 12 columns, total width = rect.width. Gap = 24px (gap-6)
     const colWidth = (rect.width - (11 * 24)) / 12;
-    const rowHeight = 60 + 24; // 60px height + 24px gap
+    const rowHeight = 60 + 24; 
 
     const x = Math.floor(xPx / (colWidth + 24));
     const y = Math.floor(yPx / rowHeight);
 
-    // Clamp to valid range
     const clampedX = Math.max(0, Math.min(11, x));
     const clampedY = Math.max(0, y);
 
     moveWidgetToPos(draggedId, clampedX, clampedY);
     setDraggedId(null);
   };
+
+  const handleResizeStart = (e: React.MouseEvent, widgetId: string, layout: WidgetLayout) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingId(widgetId);
+    setResizeInitial({
+      x: e.clientX,
+      y: e.clientY,
+      colSpan: layout.colSpan,
+      rowSpan: layout.rowSpan,
+    });
+  };
+
+  useEffect(() => {
+    if (!resizingId || !resizeInitial) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const grid = gridRef.current;
+      if (!grid) return;
+
+      const rect = grid.getBoundingClientRect();
+      const colWidth = (rect.width - (11 * 24)) / 12;
+      const rowHeight = 60;
+      const gap = 24;
+
+      const deltaX = e.clientX - resizeInitial.x;
+      const deltaY = e.clientY - resizeInitial.y;
+
+      const newColSpan = Math.max(1, Math.min(12, Math.round(resizeInitial.colSpan + deltaX / (colWidth + gap))));
+      const newRowSpan = Math.max(1, Math.round(resizeInitial.rowSpan + deltaY / (rowHeight + gap)));
+
+      updateWidget(resizingId, { layout: { colSpan: newColSpan, rowSpan: newRowSpan } });
+    };
+
+    const handleMouseUp = () => {
+      setResizingId(null);
+      setResizeInitial(null);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [resizingId, resizeInitial, updateWidget]);
 
   return (
     <div className={`flex flex-1 overflow-hidden ${editing ? 'editing-mode' : ''}`}>
@@ -272,7 +318,7 @@ export function DashboardShell() {
                       )}
                     </div>
                     {editing && (
-                      <div className="flex shrink-0 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100">
                         <button
                           type="button"
                           className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-900/30"
@@ -303,24 +349,11 @@ export function DashboardShell() {
                   </div>
 
                   {editing && (
-                    <div className="absolute -right-2 -bottom-2 flex gap-1 bg-white dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xl z-20">
-                      <button 
-                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
-                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, colSpan: Math.max(1, w.layout.colSpan - 1) } })}
-                      >↔-</button>
-                      <button 
-                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
-                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, colSpan: Math.min(12, w.layout.colSpan + 1) } })}
-                      >↔+</button>
-                      <div className="w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
-                      <button 
-                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
-                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, rowSpan: Math.max(1, w.layout.rowSpan - 1) } })}
-                      >↕-</button>
-                      <button 
-                        className="w-6 h-6 flex items-center justify-center text-[10px] font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
-                        onClick={() => updateWidget(w.id, { layout: { ...w.layout, rowSpan: Math.min(20, w.layout.rowSpan + 1) } })}
-                      >↕+</button>
+                    <div 
+                      className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center group/resize z-30"
+                      onMouseDown={(e) => handleResizeStart(e, w.id, w.layout)}
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 group-hover/resize:bg-blue-500 transition-colors" />
                     </div>
                   )}
                 </section>
