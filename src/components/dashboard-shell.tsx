@@ -227,7 +227,7 @@ export function DashboardShell() {
   };
 
   return (
-    <div className={`flex flex-1 overflow-hidden ${editing ? 'editing-mode' : ''}`}>
+    <div className={`flex flex-1 overflow-hidden ${editing ? 'editing-mode' : ''} ${(movingId || resizingId) ? 'select-none' : ''}`}>
       <div className={`transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0'} overflow-hidden border-r border-zinc-200 dark:border-zinc-800`}>
         <div className="w-72">
           <ConnectionsPanel />
@@ -333,7 +333,9 @@ export function DashboardShell() {
             ref={gridRef}
             className="grid grid-cols-2 md:grid-cols-12 gap-4 md:gap-6 [grid-auto-rows:60px]"
           >
-            {dashboard.widgets.map((w) => {
+            {[...dashboard.widgets]
+              .sort((a, b) => ((a.layout.y ?? 0) * 100 + (a.layout.x ?? 0)) - ((b.layout.y ?? 0) * 100 + (b.layout.x ?? 0)))
+              .map((w) => {
               const conn = connections.find((c) => c.id === w.connectionId);
               const isDragging = draggedId === w.id;
               const showHeader = !w.display.hideHeader;

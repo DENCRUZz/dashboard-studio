@@ -183,14 +183,51 @@ export const useDashboardStore = create<Store>()(
           },
         })),
       moveWidgetToPos: (id, x, y) =>
-        set((s) => ({
-          dashboard: {
-            ...s.dashboard,
-            widgets: s.dashboard.widgets.map((w) =>
-              w.id === id ? { ...w, layout: { ...w.layout, x, y } } : w
-            ),
-          },
-        })),
+        set((s) => {
+          const widgets = [...s.dashboard.widgets];
+          const targetIdx = widgets.findIndex((w) => w.id === id);
+          if (targetIdx === -1) return s;
+          
+          const target = widgets[targetIdx];
+          const oldX = target.layout.x ?? 0;
+          const oldY = target.layout.y ?? 0;
+          
+          if (oldX === x && oldY === y) return s;
+
+          const targetW = target.layout.colSpan || 6;
+          const targetH = target.layout.rowSpan || 4;
+
+          // Check collisions with other widgets
+          const collidingIdx = widgets.findIndex((w, idx) => {
+            if (idx === targetIdx) return false;
+            const wx = w.layout.x ?? 0;
+            const wy = w.layout.y ?? 0;
+            const ww = w.layout.colSpan || 6;
+            const wh = w.layout.rowSpan || 4;
+            
+            // AABB intersection (require a significant overlap to swap, not just 1 pixel)
+            return (
+              x < wx + ww &&
+              x + targetW > wx &&
+              y < wy + wh &&
+              y + targetH > wy
+            );
+          });
+
+          if (collidingIdx !== -1) {
+             const colliding = widgets[collidingIdx];
+             widgets[collidingIdx] = { ...colliding, layout: { ...colliding.layout, x: oldX, y: oldY } };
+          }
+          
+          widgets[targetIdx] = { ...target, layout: { ...target.layout, x, y } };
+
+          return {
+            dashboard: {
+              ...s.dashboard,
+              widgets,
+            },
+          };
+        }),
 
       saveWidgetView: (widgetId, name) =>
         set((s) => ({
