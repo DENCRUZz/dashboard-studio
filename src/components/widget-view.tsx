@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { SessionSort, SessionFilter } from "@/components/notion-view-bar";
 import {
   Bar,
   BarChart,
@@ -541,10 +542,18 @@ export function WidgetView({
   widget,
   connection,
   isPreview = false,
+  sessionSort,
+  sessionFilters,
+  sessionHidden,
+  onColumnsChange,
 }: {
   widget: DashboardWidget;
   connection: SupabaseConnection | undefined;
   isPreview?: boolean;
+  sessionSort?: SessionSort;
+  sessionFilters?: SessionFilter[];
+  sessionHidden?: string[];
+  onColumnsChange?: (cols: string[]) => void;
 }) {
   const [result, setResult] = useState<FetchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -576,6 +585,16 @@ export function WidgetView({
     void load();
   }, [load]);
 
+  // Surface column names to parent
+  const onColumnsChangeRef = useRef(onColumnsChange);
+  useEffect(() => { onColumnsChangeRef.current = onColumnsChange; }, [onColumnsChange]);
+  useEffect(() => {
+    if (!result?.ok) return;
+    const cols = new Set<string>();
+    result.rows.forEach((r) => Object.keys(r).forEach((k) => cols.add(k)));
+    onColumnsChangeRef.current?.([...cols]);
+  }, [result]);
+
   const editing = useDashboardStore((s) => s.editing);
 
   const processed = useMemo(() => {
@@ -584,6 +603,62 @@ export function WidgetView({
   }, [widget, result]);
 
   const display = mergeDisplay(widget.display);
+
+  // Apply session sort + filters + hidden (client-side, session-only)
+  const sessionRows = useMemo(() => {
+    let rows = processed.rows;
+
+    // Filter
+    if (sessionFilters?.length) {
+      rows = rows.filter((row) =>
+        sessionFilters.every((f) => {
+          const val = row[f.column];
+          const target = f.value;
+          const num = typeof val === "number" ? val : Number(val);
+          const numTarget = Number(target);
+          switch (f.operator) {
+            case "eq": return String(val) === target;
+            case "neq": return String(val) !== target;
+            case "gt": return num > numTarget;
+            case "gte": return num >= numTarget;
+            case "lt": return num < numTarget;
+            case "lte": return num <= numTarget;
+            case "contains": return String(val).toLowerCase().includes(target.toLowerCase());
+            case "not.contains": return !String(val).toLowerCase().includes(target.toLowerCase());
+            case "is_empty": return val == null || val === "";
+            case "is_not_empty": return val != null && val !== "";
+            default: return true;
+          }
+        })
+      );
+    }
+
+    // Sort
+    if (sessionSort) {
+      const { column, ascending } = sessionSort;
+      rows = [...rows].sort((a, b) => {
+        const av = a[column];
+        const bv = b[column];
+        if (av == null && bv == null) return 0;
+        if (av == null) return ascending ? 1 : -1;
+        if (bv == null) return ascending ? -1 : 1;
+        if (typeof av === "number" && typeof bv === "number")
+          return ascending ? av - bv : bv - av;
+        const as = String(av).toLowerCase();
+        const bs = String(bv).toLowerCase();
+        return ascending ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+    }
+
+    return rows;
+  }, [processed.rows, sessionSort, sessionFilters]);
+
+  // Merge session hidden with display hidden
+  const effectiveHidden = useMemo(() => {
+    const base = display.hiddenColumns ?? [];
+    if (!sessionHidden?.length) return base;
+    return [...new Set([...base, ...sessionHidden])];
+  }, [display.hiddenColumns, sessionHidden]);
 
   if (!connection && !isPreview) {
     return (
@@ -618,7 +693,7 @@ export function WidgetView({
     );
   }
 
-  const rows = processed.rows;
+  const rows = sessionRows;
 
   if (widget.visualMode === 'advanced') {
     return <AdvancedRenderer widget={widget} rows={rows} processed={processed} />;
@@ -707,7 +782,11 @@ export function WidgetView({
       {widget.display.visualization === "cards" ? (
         <WidgetCards widget={widget} rows={rows} searchQuery={searchQuery} />
       ) : (
-        <WidgetTable widget={widget} rows={rows} searchQuery={searchQuery} />
+        <WidgetTable
+          widget={{ ...widget, display: { ...widget.display, hiddenColumns: effectiveHidden } }}
+          rows={rows}
+          searchQuery={searchQuery}
+        />
       )}
     </div>
   );

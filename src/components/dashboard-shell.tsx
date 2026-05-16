@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect, type ChangeEventHandler } from "react";
+import { useRef, useState, useEffect, useCallback, type ChangeEventHandler } from "react";
 import { type WidgetLayout } from "@/lib/types";
 import { ConnectionsPanel } from "@/components/connections-panel";
 import { WidgetInspector } from "@/components/widget-inspector";
 import { WidgetView } from "@/components/widget-view";
+import { NotionViewBar, type SessionSort, type SessionFilter } from "@/components/notion-view-bar";
 import { useDashboardStore } from "@/stores/dashboard-store";
 
 const colClass = {
@@ -21,23 +22,158 @@ const rowMinClass = {
   4: "min-h-[380px]",
 } as const;
 
-function ViewSelector({ widget }: { widget: any }) {
-  const applyView = useDashboardStore(s => s.applyWidgetView);
-  if (!widget.views || widget.views.length === 0) return null;
+// Per-widget card: holds session-only sort/filter/hidden state
+function WidgetCard({
+  w,
+  conn,
+  editing,
+  isMobile,
+  draggedId,
+  onInspect,
+  onRemove,
+  onMoveStart,
+  onResizeStart,
+}: {
+  w: any;
+  conn: any;
+  editing: boolean;
+  isMobile: boolean;
+  draggedId: string | null;
+  onInspect: (id: string) => void;
+  onRemove: (id: string) => void;
+  onMoveStart: (e: React.MouseEvent | React.TouchEvent, id: string, layout: WidgetLayout) => void;
+  onResizeStart: (e: React.MouseEvent | React.TouchEvent, id: string, layout: WidgetLayout) => void;
+}) {
+  const [columns, setColumns] = useState<string[]>([]);
+  const [sessionSort, setSessionSort] = useState<SessionSort>(null);
+  const [sessionFilters, setSessionFilters] = useState<SessionFilter[]>([]);
+  const [sessionHidden, setSessionHidden] = useState<string[]>([]);
+
+  const handleColumnsChange = useCallback((cols: string[]) => setColumns(cols), []);
+
+  const showHeader = !w.display.hideHeader;
+  const headerOverlay = showHeader === false && editing;
+  const isDragging = draggedId === w.id;
 
   return (
-    <div className="flex items-center gap-1">
-      <span className="text-[9px] font-bold uppercase text-zinc-400">Vista:</span>
-      <select
-        className="rounded border border-zinc-200 bg-white/50 px-1.5 py-0.5 text-[10px] font-bold outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900/50"
-        value={widget.activeViewId || ""}
-        onChange={(e) => applyView(widget.id, e.target.value)}
-      >
-        {widget.views.map((v: any) => (
-          <option key={v.id} value={v.id}>{v.name}</option>
-        ))}
-      </select>
-    </div>
+    <section
+      key={w.id}
+      className={`group relative flex flex-col rounded-2xl border border-zinc-200 bg-white p-4 md:p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950
+        ${isDragging ? 'opacity-20 scale-95' : 'opacity-100'}
+        ${editing ? 'hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-500/30' : ''}
+        ${w.layout.mobileWidth === 'full' ? 'col-span-2' : 'col-span-1'}
+      `}
+      style={{
+        gridColumnStart: isMobile ? undefined : (w.layout.x ?? 0) + 1,
+        gridRowStart: isMobile ? undefined : (w.layout.y ?? 0) + 1,
+        gridColumnEnd: isMobile ? undefined : `span ${w.layout.colSpan || 6}`,
+        gridRowEnd: isMobile
+          ? `span ${w.layout.mobileRowSpan || w.layout.rowSpan || 4}`
+          : `span ${w.layout.rowSpan || 4}`,
+        backgroundColor: w.display.colorBackground,
+        color: w.display.colorText,
+      }}
+    >
+      {(showHeader || headerOverlay) && (
+        <div
+          className={`relative z-10 flex items-start justify-between gap-3 ${editing ? 'cursor-move' : ''} ${headerOverlay ? 'absolute top-3 left-3 right-3 z-50 bg-white/90 p-3 rounded-xl shadow-md backdrop-blur dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800' : 'mb-3'}`}
+          onMouseDown={(e) => onMoveStart(e, w.id, w.layout)}
+          onTouchStart={(e) => onMoveStart(e, w.id, w.layout)}
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              {editing && (
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400"
+                  title="Arrastrar para mover"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </div>
+              )}
+              <h2
+                className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 whitespace-normal leading-tight"
+                style={{ color: w.display.colorText }}
+              >
+                {w.title}
+              </h2>
+            </div>
+            {conn && (
+              <p
+                className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wider text-zinc-400"
+                style={{ color: w.display.colorText ? `${w.display.colorText}aa` : undefined }}
+              >
+                {conn.name}
+              </p>
+            )}
+            {/* Notion-style toolbar */}
+            <div onMouseDown={(e) => e.stopPropagation()}>
+              <NotionViewBar
+                widget={w}
+                columns={columns}
+                sessionSort={sessionSort}
+                setSessionSort={setSessionSort}
+                sessionFilters={sessionFilters}
+                setSessionFilters={setSessionFilters}
+                sessionHidden={sessionHidden}
+                setSessionHidden={setSessionHidden}
+              />
+            </div>
+          </div>
+          {editing && (
+            <div
+              className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-900/30"
+                onClick={() => onInspect(w.id)}
+                title="Configurar"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+                onClick={() => onRemove(w.id)}
+                title="Eliminar"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content: overflow-hidden here so charts/tables are clipped, not the toolbar dropdowns */}
+      <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden">
+        <WidgetView
+          widget={w}
+          connection={conn}
+          sessionSort={sessionSort}
+          sessionFilters={sessionFilters}
+          sessionHidden={sessionHidden}
+          onColumnsChange={handleColumnsChange}
+        />
+      </div>
+
+      {editing && (
+        <div
+          className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize flex items-center justify-center group/resize z-30 touch-none"
+          onMouseDown={(e) => onResizeStart(e, w.id, w.layout)}
+          onTouchStart={(e) => onResizeStart(e, w.id, w.layout)}
+        >
+          <div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700 group-hover/resize:bg-blue-500 transition-colors" />
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -214,6 +350,7 @@ export function DashboardShell() {
 
   const handleMoveStart = (e: React.MouseEvent | React.TouchEvent, widgetId: string, layout: WidgetLayout) => {
     if (!editing) return;
+    if (movingId) return; // already dragging — don't grab a second widget
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
@@ -336,111 +473,22 @@ export function DashboardShell() {
             {[...dashboard.widgets]
               .sort((a, b) => ((a.layout.y ?? 0) * 100 + (a.layout.x ?? 0)) - ((b.layout.y ?? 0) * 100 + (b.layout.x ?? 0)))
               .map((w) => {
-              const conn = connections.find((c) => c.id === w.connectionId);
-              const isDragging = draggedId === w.id;
-              const showHeader = !w.display.hideHeader;
-              const headerOverlay = showHeader === false && editing;
-
-              return (
-                <section
-                  key={w.id}
-                  className={`group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 md:p-5 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 
-                    ${isDragging ? 'opacity-20 scale-95' : 'opacity-100'} 
-                    ${editing ? 'hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-500/30' : ''}
-                    ${w.layout.mobileWidth === 'full' ? 'col-span-2' : 'col-span-1'}
-                  `}
-                  style={{
-                    gridColumnStart: isMobile ? undefined : (w.layout.x ?? 0) + 1,
-                    gridRowStart: isMobile ? undefined : (w.layout.y ?? 0) + 1,
-                    gridColumnEnd: isMobile ? undefined : `span ${w.layout.colSpan || 6}`,
-                    gridRowEnd: isMobile 
-                      ? `span ${w.layout.mobileRowSpan || w.layout.rowSpan || 4}` 
-                      : `span ${w.layout.rowSpan || 4}`,
-                    backgroundColor: w.display.colorBackground,
-                    color: w.display.colorText,
-                  }}
-                >
-                  {(showHeader || headerOverlay) && (
-                    <div 
-                      className={`flex items-start justify-between gap-3 ${editing ? 'cursor-move' : ''} ${headerOverlay ? 'absolute top-3 left-3 right-3 z-50 bg-white/90 p-3 rounded-xl shadow-md backdrop-blur dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800' : 'mb-4'}`}
-                      onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
-                      onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          {editing && (
-                            <div 
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400"
-                              title="Arrastrar para mover"
-                            >
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                              </svg>
-                            </div>
-                          )}
-                          <h2 
-                            className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 whitespace-normal leading-tight"
-                            style={{ color: w.display.colorText }}
-                          >
-                            {w.title}
-                          </h2>
-                        </div>
-                        {conn && (
-                          <p 
-                            className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wider text-zinc-400"
-                            style={{ color: w.display.colorText ? `${w.display.colorText}aa` : undefined }}
-                          >
-                            {conn.name}
-                          </p>
-                        )}
-                        <div className="mt-1" onMouseDown={e => e.stopPropagation()}>
-                          <ViewSelector widget={w} />
-                        </div>
-                      </div>
-                      {editing && (
-                        <div className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100" onMouseDown={e => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-900/30"
-                            onClick={() => setInspectId(w.id)}
-                            title="Configurar"
-                          >
-                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
-                            onClick={() => removeWidget(w.id)}
-                            title="Eliminar"
-                          >
-                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="flex-1 min-h-0 relative flex flex-col">
-                    <WidgetView widget={w} connection={conn} />
-                  </div>
-
-                  {editing && (
-                    <div 
-                      className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize flex items-center justify-center group/resize z-30 touch-none"
-                      onMouseDown={(e) => handleResizeStart(e, w.id, w.layout)}
-                      onTouchStart={(e) => handleResizeStart(e, w.id, w.layout)}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700 group-hover/resize:bg-blue-500 transition-colors" />
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+                const conn = connections.find((c) => c.id === w.connectionId);
+                return (
+                  <WidgetCard
+                    key={w.id}
+                    w={w}
+                    conn={conn}
+                    editing={editing}
+                    isMobile={isMobile}
+                    draggedId={draggedId}
+                    onInspect={setInspectId}
+                    onRemove={removeWidget}
+                    onMoveStart={handleMoveStart}
+                    onResizeStart={handleResizeStart}
+                  />
+                );
+              })}
           </div>
         </main>
       </div>
