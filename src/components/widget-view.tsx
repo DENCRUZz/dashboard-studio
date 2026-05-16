@@ -23,7 +23,7 @@ import {
   fetchWidgetRows,
   type FetchResult,
 } from "@/lib/fetch-widget-data";
-import type { DashboardWidget, DisplayConfig, SupabaseConnection } from "@/lib/types";
+import type { DashboardWidget, DisplayConfig, SupabaseConnection, WidgetComponent, ComponentAnchor } from "@/lib/types";
 import { mergeDisplay, type FilterOperator, type ColorRule } from "@/lib/types";
 import { useDashboardStore } from "@/stores/dashboard-store";
 
@@ -455,12 +455,96 @@ function formatSimple(v: unknown): string {
   return String(v);
 }
 
+const anchorStyles: Record<ComponentAnchor, React.CSSProperties> = {
+  'top-left': { top: 0, left: 0 },
+  'top-center': { top: 0, left: '50%', transform: 'translateX(-50%)' },
+  'top-right': { top: 0, right: 0 },
+  'center-left': { top: '50%', left: 0, transform: 'translateY(-50%)' },
+  'center': { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+  'center-right': { top: '50%', right: 0, transform: 'translateY(-50%)' },
+  'bottom-left': { bottom: 0, left: 0 },
+  'bottom-center': { bottom: 0, left: '50%', transform: 'translateX(-50%)' },
+  'bottom-right': { bottom: 0, right: 0 },
+};
+
+function AdvancedRenderer({ 
+  widget, 
+  rows, 
+  processed 
+}: { 
+  widget: DashboardWidget; 
+  rows: Record<string, unknown>[]; 
+  processed: any;
+}) {
+  const display = mergeDisplay(widget.display);
+  const components = widget.visualComponents || [];
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {components.filter(c => c.visible).map(c => {
+        let content = c.content || "";
+        
+        if (c.type === 'value' && c.content) {
+          const val = computeAggregate(rows, c.content, display.aggregate);
+          content = typeof val === 'number' 
+            ? formatDisplayNumber(val, display, c.content)
+            : String(val ?? "");
+        }
+
+        const anchorStyle = anchorStyles[c.position.anchor] || {};
+        
+        return (
+          <div
+            key={c.id}
+            style={{
+              ...anchorStyle,
+              position: 'absolute',
+              color: c.color,
+              fontSize: c.fontSize ? `${c.fontSize}px` : undefined,
+              fontWeight: c.fontWeight,
+              fontFamily: c.fontFamily,
+              opacity: c.opacity,
+              marginLeft: c.position.x,
+              marginTop: c.position.y,
+              transform: `${anchorStyle.transform || ''} rotate(${c.position.rotation || 0}deg)`.trim(),
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              zIndex: 10,
+              width: c.position.width || 'auto',
+              height: c.position.height || 'auto',
+            }}
+          >
+            {c.type === 'icon' ? (
+              <span className="text-xl">★</span>
+            ) : c.type === 'chart' ? (
+              <div style={{ width: '100%', height: '100%', minWidth: '100px', minHeight: '100px' }}>
+                <WidgetChart 
+                  widget={{
+                    ...widget,
+                    display: { ...widget.display, colorAccent: c.color || widget.display.colorAccent }
+                  }} 
+                  rows={rows} 
+                  timeSeries={processed?.timeSeries || null} 
+                />
+              </div>
+            ) : (
+              content
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function WidgetView({
   widget,
   connection,
+  isPreview = false,
 }: {
   widget: DashboardWidget;
   connection: SupabaseConnection | undefined;
+  isPreview?: boolean;
 }) {
   const [result, setResult] = useState<FetchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -501,7 +585,7 @@ export function WidgetView({
 
   const display = mergeDisplay(widget.display);
 
-  if (!connection) {
+  if (!connection && !isPreview) {
     return (
       <p className="text-sm text-amber-700 dark:text-amber-400">
         Selecciona o crea una conexión Supabase para este bloque.
@@ -536,6 +620,9 @@ export function WidgetView({
 
   const rows = processed.rows;
 
+  if (widget.visualMode === 'advanced') {
+    return <AdvancedRenderer widget={widget} rows={rows} processed={processed} />;
+  }
 
   if (widget.display.visualization === "kpi") {
     const field =

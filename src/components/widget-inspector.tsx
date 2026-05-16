@@ -17,6 +17,7 @@ import {
   type CustomColumn,
 } from "@/lib/types";
 import { useColumnSuggestions } from "@/hooks/use-column-suggestions";
+import { WidgetVisualEditor } from "./widget-visual-editor";
 
 // --- Helper Components ---
 
@@ -611,6 +612,7 @@ export function WidgetInspector({ widget, onClose }: { widget: DashboardWidget; 
   const updateWidget = useDashboardStore((s) => s.updateWidget);
   const conn = connections.find((c) => c.id === widget.connectionId);
   const [rpcPreviewRows, setRpcPreviewRows] = useState<Record<string, unknown>[] | null>(null);
+  const [activeTab, setActiveTab] = useState<'data' | 'visual'>('data');
 
   const { suggestions, tableColsLoading } = useColumnSuggestions(
     widget,
@@ -638,213 +640,306 @@ export function WidgetInspector({ widget, onClose }: { widget: DashboardWidget; 
           <button onClick={onClose} className="rounded-full bg-zinc-900 px-6 py-2 text-xs font-bold text-white hover:bg-zinc-800 transition-all shadow-lg active:scale-95">Guardar y Cerrar</button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6">
-          {/* Columna Izquierda: Datos y Columnas (60%) */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Nombre del bloque</span>
-                <input className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" value={widget.title} onChange={(e) => patch({ title: e.target.value })} />
-              </label>
-              <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Conexión Supabase</span>
-                <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" value={widget.connectionId} onChange={(e) => patch({ connectionId: e.target.value })}>
-                  {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
-            </div>
+        <div className="flex border-b border-zinc-100 dark:border-zinc-800 px-6 bg-white/50 dark:bg-zinc-950/50">
+          <button 
+            onClick={() => setActiveTab('data')}
+            className={`px-4 py-2 text-xs font-bold transition-all border-b-2 ${activeTab === 'data' ? 'border-blue-500 text-blue-600' : 'border-transparent text-zinc-400 hover:text-zinc-600'}`}
+          >
+            Datos y Configuración
+          </button>
+          <button 
+            onClick={() => setActiveTab('visual')}
+            className={`px-4 py-2 text-xs font-bold transition-all border-b-2 ${activeTab === 'visual' ? 'border-blue-500 text-blue-600' : 'border-transparent text-zinc-400 hover:text-zinc-600'}`}
+          >
+            Editor Visual (Beta)
+          </button>
+        </div>
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Origen de Datos</p>
-              <div className="flex gap-2 mb-4 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg">
-                <button 
-                  onClick={() => patch({ source: { ...widget.source, kind: "table" } as any })} 
-                  className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.source.kind === 'table' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
-                >
-                  Tabla
-                </button>
-                <button 
-                  onClick={() => patch({ source: { ...widget.source, kind: "rpc" } as any })} 
-                  className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.source.kind === 'rpc' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
-                >
-                  RPC
-                </button>
-              </div>
-              {widget.source.kind === "table" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <input className="rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" placeholder="Esquema (public)" value={widget.source.schema || ""} onChange={(e) => patch({ source: { ...widget.source, schema: e.target.value || undefined } as any })} />
-                  <input className="rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" placeholder="Tabla" value={widget.source.table} onChange={(e) => patch({ source: { ...widget.source, table: e.target.value } as any })} />
-                </div>
-              ) : (
-                <input className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" placeholder="Nombre de la función RPC" value={widget.source.functionName} onChange={(e) => patch({ source: { ...widget.source, functionName: e.target.value } as any })} />
-              )}
-            </section>
-
-            <section className="space-y-3">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Filtros de Datos (Lado Servidor)</span>
-              <FilterGroupEditor isRoot group={widget.source.advancedFilters || { operator: "and", rules: [] }} columns={suggestions} onChange={(g) => patch({ source: { ...widget.source, advancedFilters: g } as any })} />
-            </section>
-            
-            <ColumnsManager 
-              suggestions={suggestions} 
-              display={display} 
-              onPatch={(p) => patch({ display: p })} 
-            />
-          </div>
-
-          {/* Columna Derecha: Visualización y Diseño (40%) */}
-          <div className="lg:col-span-5 space-y-6">
-            <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Configuración de Visualización</p>
-              <div className="space-y-5">
+        {activeTab === 'data' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6">
+            {/* Columna Izquierda: Datos y Columnas (60%) */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Tipo de Visualización</span>
-                  <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm dark:border-zinc-800 dark:bg-zinc-900" value={display.visualization} onChange={(e) => patch({ display: { visualization: e.target.value as VisualizationKind } })}>
-                    <option value="kpi">Métrica Grande (KPI)</option>
-                    <option value="table">Tabla de Datos</option>
-                    <option value="bar">Gráfico de Barras</option>
-                    <option value="line">Gráfico de Líneas</option>
-                    <option value="pie">Gráfico de Tarta</option>
-                    <option value="cards">Tarjetas Informativas</option>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Nombre del bloque</span>
+                  <input className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" value={widget.title} onChange={(e) => patch({ title: e.target.value })} />
+                  <label className="mt-3 flex items-center gap-2 cursor-pointer group">
+                    <input 
+                      type="checkbox" 
+                      className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700" 
+                      checked={display.hideHeader || false} 
+                      onChange={(e) => patch({ display: { hideHeader: e.target.checked } })} 
+                    />
+                    <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">
+                      Ocultar título en el tablero
+                    </span>
+                  </label>
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Conexión Supabase</span>
+                  <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" value={widget.connectionId} onChange={(e) => patch({ connectionId: e.target.value })}>
+                    {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
+              <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Origen de Datos</p>
+                <div className="flex gap-2 mb-4 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg">
+                  <button 
+                    onClick={() => patch({ source: { ...widget.source, kind: "table" } as any })} 
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.source.kind === 'table' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
+                  >
+                    Tabla
+                  </button>
+                  <button 
+                    onClick={() => patch({ source: { ...widget.source, kind: "rpc" } as any })} 
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.source.kind === 'rpc' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
+                  >
+                    RPC
+                  </button>
+                </div>
+                {widget.source.kind === "table" ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <input className="rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" placeholder="Esquema (public)" value={widget.source.schema || ""} onChange={(e) => patch({ source: { ...widget.source, schema: e.target.value || undefined } as any })} />
+                    <input className="rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" placeholder="Tabla" value={widget.source.table} onChange={(e) => patch({ source: { ...widget.source, table: e.target.value } as any })} />
+                  </div>
+                ) : (
+                  <input className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none dark:border-zinc-800 dark:bg-zinc-900" placeholder="Nombre de la función RPC" value={widget.source.functionName} onChange={(e) => patch({ source: { ...widget.source, functionName: e.target.value } as any })} />
+                )}
+              </section>
+
+              <section className="space-y-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Filtros de Datos (Lado Servidor)</span>
+                <FilterGroupEditor isRoot group={widget.source.advancedFilters || { operator: "and", rules: [] }} columns={suggestions} onChange={(g) => patch({ source: { ...widget.source, advancedFilters: g } as any })} />
+              </section>
+              
+              <ColumnsManager 
+                suggestions={suggestions} 
+                display={display} 
+                onPatch={(p) => patch({ display: p })} 
+              />
+            </div>
+
+            {/* Columna Derecha: Visualización y Diseño (40%) */}
+            <div className="lg:col-span-5 space-y-6">
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Configuración de Visualización</p>
+                <div className="space-y-5">
                   <label className="block">
-                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Valor / Eje Y</span>
-                    <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.valueField || ""} onChange={(e) => patch({ display: { valueField: e.target.value } })}>
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Tipo de Visualización</span>
+                    <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm dark:border-zinc-800 dark:bg-zinc-900" value={display.visualization} onChange={(e) => patch({ display: { visualization: e.target.value as VisualizationKind } })}>
+                      <option value="kpi">Métrica Grande (KPI)</option>
+                      <option value="table">Tabla de Datos</option>
+                      <option value="bar">Gráfico de Barras</option>
+                      <option value="line">Gráfico de Líneas</option>
+                      <option value="pie">Gráfico de Tarta</option>
+                      <option value="cards">Tarjetas Informativas</option>
+                    </select>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Valor / Eje Y</span>
+                      <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.valueField || ""} onChange={(e) => patch({ display: { valueField: e.target.value } })}>
+                        <option value="">(Ninguno)</option>{allSuggestions.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Agregación</span>
+                      <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.aggregate} onChange={(e) => patch({ display: { aggregate: e.target.value as AggregateMode } })}>
+                        <option value="sum">Suma</option><option value="avg">Promedio</option><option value="count_rows">Contar filas</option><option value="min">Mínimo</option><option value="max">Máximo</option><option value="first">Primer valor</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Categoría / Agrupación (Eje X)</span>
+                    <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.categoryField || ""} onChange={(e) => patch({ display: { categoryField: e.target.value, groupByField: e.target.value } })}>
                       <option value="">(Ninguno)</option>{allSuggestions.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </label>
+                </div>
+              </section>
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Apariencia y Colores</p>
+                <div className="grid grid-cols-2 gap-4">
                   <label className="block">
-                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Agregación</span>
-                    <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.aggregate} onChange={(e) => patch({ display: { aggregate: e.target.value as AggregateMode } })}>
-                      <option value="sum">Suma</option><option value="avg">Promedio</option><option value="count_rows">Contar filas</option><option value="min">Mínimo</option><option value="max">Máximo</option><option value="first">Primer valor</option>
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Color de Fondo</span>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <input 
+                        type="color" 
+                        className="h-8 w-8 shrink-0 rounded-lg cursor-pointer border-none bg-transparent p-0"
+                        value={display.colorBackground || "#18181b"}
+                        onChange={(e) => patch({ display: { colorBackground: e.target.value } })}
+                      />
+                      <input 
+                        type="text"
+                        className="flex-1 min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs uppercase font-mono dark:border-zinc-800 dark:bg-zinc-900"
+                        value={display.colorBackground || ""}
+                        placeholder="#18181b"
+                        onChange={(e) => patch({ display: { colorBackground: e.target.value } })}
+                      />
+                    </div>
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Color de Texto</span>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <input 
+                        type="color" 
+                        className="h-8 w-8 shrink-0 rounded-lg cursor-pointer border-none bg-transparent p-0"
+                        value={display.colorText || "#ffffff"}
+                        onChange={(e) => patch({ display: { colorText: e.target.value } })}
+                      />
+                      <input 
+                        type="text"
+                        className="flex-1 min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs uppercase font-mono dark:border-zinc-800 dark:bg-zinc-900"
+                        value={display.colorText || ""}
+                        placeholder="#ffffff"
+                        onChange={(e) => patch({ display: { colorText: e.target.value } })}
+                      />
+                    </div>
+                  </label>
+                  <label className="block col-span-2">
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Color de Gráfica / Acento</span>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <input 
+                        type="color" 
+                        className="h-8 w-8 shrink-0 rounded-lg cursor-pointer border-none bg-transparent p-0"
+                        value={display.colorAccent || "#3b82f6"}
+                        onChange={(e) => patch({ display: { colorAccent: e.target.value } })}
+                      />
+                      <input 
+                        type="text"
+                        className="flex-1 min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs uppercase font-mono dark:border-zinc-800 dark:bg-zinc-900"
+                        value={display.colorAccent || ""}
+                        placeholder="#3b82f6"
+                        onChange={(e) => patch({ display: { colorAccent: e.target.value } })}
+                      />
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Agrupación Temporal</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Columna Fecha</span>
+                    <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.dateField || ""} onChange={(e) => patch({ display: { dateField: e.target.value } })}>
+                      <option value="">(Ninguna)</option>{suggestions.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Frecuencia</span>
+                    <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.groupTimeBy} onChange={(e) => patch({ display: { groupTimeBy: e.target.value as TimeGroupDimension } })}>
+                      <option value="none">Sin agrupar</option><option value="day">Día</option><option value="week">Semana</option><option value="month">Mes</option><option value="year">Año</option>
                     </select>
                   </label>
                 </div>
+              </section>
 
-                <label className="block">
-                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Categoría / Agrupación (Eje X)</span>
-                  <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.categoryField || ""} onChange={(e) => patch({ display: { categoryField: e.target.value, groupByField: e.target.value } })}>
-                    <option value="">(Ninguno)</option>{allSuggestions.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Agrupación Temporal</p>
-              <div className="grid grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Columna Fecha</span>
-                  <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.dateField || ""} onChange={(e) => patch({ display: { dateField: e.target.value } })}>
-                    <option value="">(Ninguna)</option>{suggestions.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Frecuencia</span>
-                  <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900" value={display.groupTimeBy} onChange={(e) => patch({ display: { groupTimeBy: e.target.value as TimeGroupDimension } })}>
-                    <option value="none">Sin agrupar</option><option value="day">Día</option><option value="week">Semana</option><option value="month">Mes</option><option value="year">Año</option>
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Diseño Móvil</p>
-              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg">
-                <button 
-                  onClick={() => patch({ layout: { ...widget.layout, mobileWidth: 'half' } })}
-                  className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.layout.mobileWidth !== 'full' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
-                >
-                  Mitad (1/2)
-                </button>
-                <button 
-                  onClick={() => patch({ layout: { ...widget.layout, mobileWidth: 'full' } })}
-                  className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.layout.mobileWidth === 'full' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
-                >
-                  Completo
-                </button>
-              </div>
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Alto en Móvil</span>
-                  <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{widget.layout.mobileRowSpan || widget.layout.rowSpan || 4} filas</span>
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Diseño Móvil</p>
+                <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg">
+                  <button 
+                    onClick={() => patch({ layout: { ...widget.layout, mobileWidth: 'half' } })}
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.layout.mobileWidth !== 'full' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
+                  >
+                    Mitad (1/2)
+                  </button>
+                  <button 
+                    onClick={() => patch({ layout: { ...widget.layout, mobileWidth: 'full' } })}
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${widget.layout.mobileWidth === 'full' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500'}`}
+                  >
+                    Completo
+                  </button>
                 </div>
-                <input 
-                  type="range" 
-                  min="2" 
-                  max="12" 
-                  step="1"
-                  className="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-700"
-                  value={widget.layout.mobileRowSpan || widget.layout.rowSpan || 4}
-                  onChange={(e) => patch({ layout: { ...widget.layout, mobileRowSpan: parseInt(e.target.value) } })}
-                />
-              </div>
-              <p className="mt-2 text-[9px] text-zinc-400">Afecta cuántas filas ocupa el bloque en celulares.</p>
-            </section>
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Alto en Móvil</span>
+                    <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{widget.layout.mobileRowSpan || widget.layout.rowSpan || 4} filas</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="2" 
+                    max="12" 
+                    step="1"
+                    className="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-700"
+                    value={widget.layout.mobileRowSpan || widget.layout.rowSpan || 4}
+                    onChange={(e) => patch({ layout: { ...widget.layout, mobileRowSpan: parseInt(e.target.value) || 4 } })}
+                  />
+                </div>
+                <p className="mt-2 text-[9px] text-zinc-400">Afecta cuántas filas ocupa el bloque en celulares.</p>
+              </section>
 
-            <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Vistas Guardadas (Filtros)</p>
-                <button 
-                  onClick={() => {
-                    const name = prompt("Nombre de la vista:");
-                    if (name) useDashboardStore.getState().saveWidgetView(widget.id, name);
-                  }}
-                  className="text-[10px] font-bold text-blue-600 hover:underline"
-                >
-                  + Guardar Actual
-                </button>
-              </div>
-              <div className="space-y-2">
-                {(!widget.views || widget.views.length === 0) && (
-                  <p className="text-[10px] italic text-zinc-400 text-center py-2">No hay vistas guardadas.</p>
-                )}
-                {widget.views?.map(v => (
-                  <div key={v.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/30">
-                    <span className="text-xs font-medium">{v.name}</span>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => useDashboardStore.getState().applyWidgetView(widget.id, v.id)}
-                        className={`text-[10px] font-bold ${widget.activeViewId === v.id ? 'text-green-600' : 'text-zinc-400 hover:text-blue-600'}`}
-                      >
-                        {widget.activeViewId === v.id ? 'Activa' : 'Aplicar'}
-                      </button>
-                      <button 
-                        onClick={() => useDashboardStore.getState().deleteWidgetView(widget.id, v.id)}
-                        className="text-[10px] text-red-400 hover:text-red-600"
-                      >
-                        ✕
-                      </button>
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Vistas Guardadas (Filtros)</p>
+                  <button 
+                    onClick={() => {
+                      const name = prompt("Nombre de la vista:");
+                      if (name) useDashboardStore.getState().saveWidgetView(widget.id, name);
+                    }}
+                    className="text-[10px] font-bold text-blue-600 hover:underline"
+                  >
+                    + Guardar Actual
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(!widget.views || widget.views.length === 0) && (
+                    <p className="text-[10px] italic text-zinc-400 text-center py-2">No hay vistas guardadas.</p>
+                  )}
+                  {widget.views?.map(v => (
+                    <div key={v.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/30">
+                      <span className="text-xs font-medium">{v.name}</span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => useDashboardStore.getState().applyWidgetView(widget.id, v.id)}
+                          className={`text-[10px] font-bold ${widget.activeViewId === v.id ? 'text-green-600' : 'text-zinc-400 hover:text-blue-600'}`}
+                        >
+                          {widget.activeViewId === v.id ? 'Activa' : 'Aplicar'}
+                        </button>
+                        <button 
+                          onClick={() => useDashboardStore.getState().deleteWidgetView(widget.id, v.id)}
+                          className="text-[10px] text-red-400 hover:text-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+                  ))}
+                </div>
+              </section>
 
-            <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Opciones de Bloque</p>
-              <div className="mt-5 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative inline-flex items-center">
-                    <input type="checkbox" className="sr-only peer" checked={display.enableSearch} onChange={(e) => patch({ display: { enableSearch: e.target.checked } })} />
-                    <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-600"></div>
-                  </div>
-                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">Activar buscador interno</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                   <div className="relative inline-flex items-center">
-                    <input type="checkbox" className="sr-only peer" checked={display.showTotalRow} onChange={(e) => patch({ display: { showTotalRow: e.target.checked } })} />
-                    <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-600"></div>
-                  </div>
-                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">Mostrar fila de totales</span>
-                </label>
-              </div>
-            </section>
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Opciones de Bloque</p>
+                <div className="mt-5 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative inline-flex items-center">
+                      <input type="checkbox" className="sr-only peer" checked={display.enableSearch} onChange={(e) => patch({ display: { enableSearch: e.target.checked } })} />
+                      <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-600"></div>
+                    </div>
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">Activar buscador interno</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                     <div className="relative inline-flex items-center">
+                      <input type="checkbox" className="sr-only peer" checked={display.showTotalRow} onChange={(e) => patch({ display: { showTotalRow: e.target.checked } })} />
+                      <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-600"></div>
+                    </div>
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">Mostrar fila de totales</span>
+                  </label>
+                </div>
+              </section>
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'visual' && (
+          <div className="px-6 py-6">
+            <WidgetVisualEditor widget={widget} suggestions={allSuggestions} connection={conn} />
+          </div>
+        )}
       </div>
     </div>
   );

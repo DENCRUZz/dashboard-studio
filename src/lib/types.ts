@@ -170,6 +170,8 @@ export type DisplayConfig = {
   columnOrder?: string[];
   /** NEW: UI-level sorting */
   orderBy?: { column: string; ascending: boolean };
+  /** NEW: Toggle to hide widget header (title/DB) */
+  hideHeader?: boolean;
 };
 
 export type WidgetLayout = {
@@ -182,6 +184,41 @@ export type WidgetLayout = {
   mobileRowSpan?: number;
 };
 
+export type ComponentAnchor = 
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'center-left' | 'center' | 'center-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+export type ComponentType = 'text' | 'value' | 'chart' | 'icon' | 'shape';
+
+export type WidgetComponent = {
+  id: string;
+  name: string;
+  type: ComponentType;
+  visible: boolean;
+  
+  // Style
+  color?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  fontFamily?: string;
+  opacity?: number;
+  
+  // Content
+  content?: string; // Static text, field name, or expression
+  iconName?: string;
+  
+  // Position
+  position: {
+    anchor: ComponentAnchor;
+    x: number; // Offset from anchor
+    y: number;
+    width?: string | number; // 'auto', '100%', or px
+    height?: string | number;
+    rotation?: number;
+  };
+};
+
 export type DashboardWidget = {
   id: string;
   title: string;
@@ -192,6 +229,9 @@ export type DashboardWidget = {
   /** NEW: Saved views */
   views: WidgetView[];
   activeViewId?: string;
+  /** NEW: KWGT-style visual components */
+  visualMode: 'classic' | 'advanced';
+  visualComponents: WidgetComponent[];
 };
 
 export type DashboardStateShape = {

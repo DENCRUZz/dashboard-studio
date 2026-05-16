@@ -8,6 +8,7 @@ import {
   type DisplayConfig,
   type SupabaseConnection,
   type FilterGroup,
+  type WidgetComponent,
   defaultDisplay,
   defaultLayout,
   mergeDisplay,
@@ -21,6 +22,8 @@ export type WidgetPatch = {
   layout?: Partial<DashboardWidget["layout"]>;
   display?: Partial<DisplayConfig>;
   activeViewId?: string;
+  visualMode?: 'classic' | 'advanced';
+  visualComponents?: WidgetComponent[];
 };
 
 type Store = {
@@ -77,6 +80,8 @@ function defaultWidget(
     display: defaultDisplay(),
     layout: { x: 0, y: 0, colSpan: 6, rowSpan: 4 },
     views: [],
+    visualMode: 'classic',
+    visualComponents: [],
   };
 }
 
@@ -313,6 +318,8 @@ export const useDashboardStore = create<Store>()(
             if (w.source.functionName === undefined) w.source.functionName = "";
             if (!w.source.args) w.source.args = {};
           }
+          if (w.visualMode === undefined) w.visualMode = 'classic';
+          if (!w.visualComponents) w.visualComponents = [];
         });
         return { ...currentState, ...s };
       },

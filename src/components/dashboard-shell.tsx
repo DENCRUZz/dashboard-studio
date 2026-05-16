@@ -336,6 +336,8 @@ export function DashboardShell() {
             {dashboard.widgets.map((w) => {
               const conn = connections.find((c) => c.id === w.connectionId);
               const isDragging = draggedId === w.id;
+              const showHeader = !w.display.hideHeader;
+              const headerOverlay = showHeader === false && editing;
 
               return (
                 <section
@@ -356,68 +358,70 @@ export function DashboardShell() {
                     color: w.display.colorText,
                   }}
                 >
-                  <div 
-                    className={`mb-4 flex items-start justify-between gap-3 ${editing ? 'cursor-move' : ''}`}
-                    onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
-                    onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
-                  >
-                    <div className="min-w-0" onMouseDown={e => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
-                        {editing && (
-                          <div 
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400"
-                            title="Arrastrar para mover"
+                  {(showHeader || headerOverlay) && (
+                    <div 
+                      className={`flex items-start justify-between gap-3 ${editing ? 'cursor-move' : ''} ${headerOverlay ? 'absolute top-3 left-3 right-3 z-50 bg-white/90 p-3 rounded-xl shadow-md backdrop-blur dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800' : 'mb-4'}`}
+                      onMouseDown={(e) => handleMoveStart(e, w.id, w.layout)}
+                      onTouchStart={(e) => handleMoveStart(e, w.id, w.layout)}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          {editing && (
+                            <div 
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400"
+                              title="Arrastrar para mover"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            </div>
+                          )}
+                          <h2 
+                            className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 whitespace-normal leading-tight"
+                            style={{ color: w.display.colorText }}
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                          </div>
+                            {w.title}
+                          </h2>
+                        </div>
+                        {conn && (
+                          <p 
+                            className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wider text-zinc-400"
+                            style={{ color: w.display.colorText ? `${w.display.colorText}aa` : undefined }}
+                          >
+                            {conn.name}
+                          </p>
                         )}
-                        <h2 
-                          className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 whitespace-normal leading-tight"
-                          style={{ color: w.display.colorText }}
-                        >
-                          {w.title}
-                        </h2>
+                        <div className="mt-1" onMouseDown={e => e.stopPropagation()}>
+                          <ViewSelector widget={w} />
+                        </div>
                       </div>
-                      {conn && (
-                        <p 
-                          className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wider text-zinc-400"
-                          style={{ color: w.display.colorText ? `${w.display.colorText}aa` : undefined }}
-                        >
-                          {conn.name}
-                        </p>
+                      {editing && (
+                        <div className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100" onMouseDown={e => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-900/30"
+                            onClick={() => setInspectId(w.id)}
+                            title="Configurar"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+                            onClick={() => removeWidget(w.id)}
+                            title="Eliminar"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       )}
-                      <div className="mt-1" onMouseDown={e => e.stopPropagation()}>
-                        <ViewSelector widget={w} />
-                      </div>
                     </div>
-                    {editing && (
-                      <div className="flex shrink-0 items-center gap-1.5 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100" onMouseDown={e => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-blue-900/30"
-                          onClick={() => setInspectId(w.id)}
-                          title="Configurar"
-                        >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
-                          onClick={() => removeWidget(w.id)}
-                          title="Eliminar"
-                        >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  )}
                   
                   <div className="flex-1 min-h-0 relative flex flex-col">
                     <WidgetView widget={w} connection={conn} />
